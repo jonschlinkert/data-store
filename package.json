@@ -1,7 +1,7 @@
 {
   "name": "data-store",
   "description": "Store data from YAML front matter in HTML data-attributes.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "homepage": "https://github.com/jonschlinkert/data-store",
   "author": {
     "name": "Jon Schlinkert",

@@ -25,7 +25,6 @@ describe('data-store:', function() {
       // Arbitrary object, to extend the context
       var obj = {basename: 'foo', ext: '.html'};
       var store = dataStore(body);
-      console.log(store)
       store.set('metadata', obj);
       var actual = store.get('metadata');
       expect(actual).to.have.property('basename');
