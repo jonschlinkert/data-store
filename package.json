@@ -1,7 +1,7 @@
 {
   "name": "data-store",
-  "description": "Store data from YAML front matter in HTML data-attributes.",
-  "version": "0.1.1",
+  "description": "Easily get, set and persist config data.",
+  "version": "0.2.0",
   "homepage": "https://github.com/jonschlinkert/data-store",
   "author": {
     "name": "Jon Schlinkert",
@@ -20,6 +20,17 @@
       "url": "https://github.com/jonschlinkert/data-store/blob/master/LICENSE-MIT"
     }
   ],
+  "main": "index.js",
+  "engines": {
+    "node": ">=0.10.0"
+  },
+  "scripts": {
+    "test": "mocha -R spec"
+  },
+  "devDependencies": {
+    "mocha": "*",
+    "should": "*"
+  },
   "keywords": [
     "docs",
     "documentation",
@@ -29,22 +40,9 @@
     "templates",
     "verb"
   ],
-  "main": "index.js",
-  "engines": {
-    "node": ">=0.8"
-  },
-  "scripts": {
-    "test": "mocha -R spec"
-  },
-  "devDependencies": {
-    "verb": "~0.2.0",
-    "chai": "~1.9.1",
-    "mocha": "~1.18.2"
-  },
   "dependencies": {
-    "cheerio": "~0.15.0",
-    "fs-utils": "~0.4.1",
-    "gray-matter": "~0.3.5",
-    "lodash": "~2.4.1"
+    "graceful-fs": "^3.0.4",
+    "kind-of": "^0.1.2",
+    "lodash": "^2.4.1"
   }
 }
