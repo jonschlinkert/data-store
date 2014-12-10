@@ -5,6 +5,7 @@ node_modules
 npm-debug.log
 temp
 test/actual
+actual
 tmp
 TODO.md
 vendor
