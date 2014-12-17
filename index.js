@@ -1,9 +1,11 @@
 'use strict';
 
 var path = require('path');
-var typeOf = require('kind-of');
 var fs = require('graceful-fs');
-var _ = require('lodash');
+var typeOf = require('kind-of');
+var extend = require('extend-shallow');
+var cloneDeep = require('clone-deep');
+var del = require('delete');
 
 /**
  * Expose `Store`
@@ -17,28 +19,29 @@ module.exports =  Store;
  *
  * ```js
  * var store = new Store('bar', 'foo');
- * //=> saves `{}` to 'foo/.bar.json'
+ * //=> './foo/.bar.json'
  *
  * var store = new Store('baz');
- * //=> saves `{}` to '~/data-store/.baz.json'
+ * //=> '~/data-store/.baz.json'
  * ```
  *
- * @param  {String} `name` Dest file name. `foo` would result in `.foo.json`
- * @param  {String} `dest` Dest directory. If not defined, the user home directory
- *                         for the current OS is used.
+ * @param  {String} `name` Store name. `foo` would result in `.foo.json`
+ * @param  {String} `base` Dest base. If not defined, the user home directory
+ *                         is used, based on OS.
  * @api public
  */
 
-function Store(name, dest) {
+function Store(name, base) {
   if (typeof name !== 'string') {
     throw new Error('data-store expects a string as the first argument.');
   }
-  this.path = path.join((dest || home('data-store')), '.' + name + '.json');
+  this.path = path.join((base || home('data-store')), '.data.' + name + '.json');
   this.config = readFile(this.path) || {};
 }
 
 /**
- * Assign `value` to `key` and save to disk.
+ * Assign `value` to `key` and save to disk. Can be
+ * a key-value pair or an object.
  *
  * ```js
  * store.set('foo', 'bar');
@@ -57,7 +60,7 @@ Store.prototype.set = function(key, val) {
   }
 
   if (typeOf(key) === 'object') {
-    _.extend(this.config, key);
+    extend(this.config, key);
   } else {
     this.config[key] = val;
   }
@@ -83,9 +86,27 @@ Store.prototype.set = function(key, val) {
 
 Store.prototype.get = function(key) {
   if (!key) {
-    return _.cloneDeep(this.config);
+    return cloneDeep(this.config);
   }
   return this.config[key];
+};
+
+/**
+ * Returns `true` if the specified `key` exists.
+ *
+ * ```js
+ * store.set('foo', 'bar');
+ * store.exists('foo');
+ * //=> true
+ * ```
+ *
+ * @param  {String} `key`
+ * @return {Boolean} Returns true if `key` exists
+ * @api public
+ */
+
+Store.prototype.exists = function(key) {
+  return this.config.hasOwnProperty(key);
 };
 
 /**
@@ -113,6 +134,7 @@ Store.prototype.save = function(dest) {
  * ```
  *
  * @param {String|Array} `key` The key(s) to omit from the store
+ * @return {Object} `Store` for chaining
  * @api public
  */
 
@@ -125,6 +147,21 @@ Store.prototype.omit = function(keys) {
 
   this.save();
   return this;
+};
+
+/**
+ * Delete the entire store. You must pass `{force: true}` if
+ * the path is outside the current working directory.
+ *
+ * ```js
+ * store.delete({force: true});
+ * ```
+ *
+ * @api public
+ */
+
+Store.prototype.delete = function(options) {
+  del.sync(this.path, options);
 };
 
 /**
@@ -164,17 +201,18 @@ function readFile(fp) {
  * @api private
  */
 
-function writeJson(dest, str, opts) {
+function writeJson(dest, str, indent) {
   var dir = path.dirname(dest);
   if (!fs.existsSync(dir)) {
     mkdir(dir);
   }
 
   try {
-    var json = JSON.stringify(str, null, 2);
+    var json = JSON.stringify(str, null, indent || 2);
     fs.writeFileSync(dest, json);
   } catch (err) {
     console.log(err);
+    return;
   }
 }
 
