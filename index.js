@@ -1,10 +1,11 @@
 'use strict';
 
 var path = require('path');
-var typeOf = require('kind-of');
 var fs = require('graceful-fs');
+var typeOf = require('kind-of');
+var extend = require('extend-shallow');
+var cloneDeep = require('clone-deep');
 var del = require('delete');
-var _ = require('lodash');
 
 /**
  * Expose `Store`
@@ -18,36 +19,29 @@ module.exports =  Store;
  *
  * ```js
  * var store = new Store('bar', 'foo');
- * //=> saves `{}` to 'foo/.bar.json'
+ * //=> './foo/.bar.json'
  *
  * var store = new Store('baz');
- * //=> saves `{}` to '~/data-store/.baz.json'
+ * //=> '~/data-store/.baz.json'
  * ```
  *
- * @param  {String} `name` Dest file name. `foo` would result in `.foo.json`
- * @param  {String} `dest` Dest directory. If not defined, the user userhome directory
- *                         for the current OS is used.
+ * @param  {String} `name` Store name. `foo` would result in `.foo.json`
+ * @param  {String} `base` Dest base. If not defined, the user home directory
+ *                         is used, based on OS.
  * @api public
  */
 
-function Store(name, dest) {
+function Store(name, base) {
   if (typeof name !== 'string') {
     throw new Error('data-store expects a string as the first argument.');
   }
-
-  this.name = name;
-  this.userhome = userhome('data-store');
-  this.path = path.join((dest || this.userhome), filename(name));
-  this.config = read(this.path) || {};
-
-  this.pending = false;
-
-  this._throttledSave = _.debounce(_.bind(this.forceSave, this), 5);
-  this.config = read(this.path)[this.name] || {};
+  this.path = path.join((base || home('data-store')), '.data.' + name + '.json');
+  this.config = readFile(this.path) || {};
 }
 
 /**
- * Assign `value` to `key` and save to disk.
+ * Assign `value` to `key` and save to disk. Can be
+ * a key-value pair or an object.
  *
  * ```js
  * store.set('foo', 'bar');
@@ -66,7 +60,7 @@ Store.prototype.set = function(key, val) {
   }
 
   if (typeOf(key) === 'object') {
-    _.extend(this.config, key);
+    extend(this.config, key);
   } else {
     this.config[key] = val;
   }
@@ -92,7 +86,7 @@ Store.prototype.set = function(key, val) {
 
 Store.prototype.get = function(key) {
   if (!key) {
-    return _.cloneDeep(this.config);
+    return cloneDeep(this.config);
   }
   return this.config[key];
 };
@@ -140,6 +134,7 @@ Store.prototype.save = function(dest) {
  * ```
  *
  * @param {String|Array} `key` The key(s) to omit from the store
+ * @return {Object} `Store` for chaining
  * @api public
  */
 
@@ -155,21 +150,18 @@ Store.prototype.omit = function(keys) {
 };
 
 /**
- * Delete the store.
+ * Delete the entire store. You must pass `{force: true}` if
+ * the path is outside the current working directory.
  *
  * ```js
- * store.delete();
+ * store.delete({force: true});
  * ```
  *
  * @api public
  */
 
-Store.prototype.delete = function(name) {
-  var fp = name
-    ? this.userhome + '/' + filename(name)
-    : this.path;
-
-  del(fp, {force: true});
+Store.prototype.delete = function(options) {
+  del.sync(this.path, options);
 };
 
 /**
@@ -178,23 +170,11 @@ Store.prototype.delete = function(name) {
  * @api private
  */
 
-function userhome(fp) {
+function home(fp) {
   var res = (process.platform === 'win32')
     ? process.env.USERPROFILE
     : process.env.HOME;
   return path.join(res, fp);
-}
-
-/**
- * Make a filename from the given `name`.
- *
- * @param {String} `name`
- * @return {String}
- * @api private
- */
-
-function filename(name) {
-  return '.' + name + '.json';
 }
 
 /**
@@ -205,7 +185,7 @@ function filename(name) {
  * @api private
  */
 
-function read(fp) {
+function readFile(fp) {
   try {
     return require(path.resolve(fp));
   } catch(err) {}
@@ -221,17 +201,18 @@ function read(fp) {
  * @api private
  */
 
-function writeJson(dest, str) {
+function writeJson(dest, str, indent) {
   var dir = path.dirname(dest);
   if (!fs.existsSync(dir)) {
     mkdir(dir);
   }
 
   try {
-    var json = JSON.stringify(str, null, 2);
+    var json = JSON.stringify(str, null, indent || 2);
     fs.writeFileSync(dest, json);
   } catch (err) {
-    throw err;
+    console.log(err);
+    return;
   }
 }
 

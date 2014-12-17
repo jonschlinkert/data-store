@@ -13,42 +13,56 @@ var Store = require('./');
 var store;
 
 describe('store', function () {
+  afterEach(function () {
+    store.delete({force: true});
+  });
   it('should create a store with the given `name`', function () {
     store = new Store('abc');
 
     store.set('foo', 'bar');
-    store.should.have.property('name', 'abc');
-    store.delete();
+    store.config.should.have.property('foo', 'bar');
   });
 
-  // it('should create a store at the given `dest`', function () {
-  //   // store = new Store('abc', 'actual/abc.json');
+  it('should create a store at the given `cwd`', function () {
+    store = new Store('abc', 'actual');
 
-  //   // store.set('foo', 'bar');
-  //   // console.log(store)
-  //   // store.should.have.property('abc');
-  // });
+    store.set('foo', 'bar');
+    store.path.should.equal('actual/.data.abc.json');
+    store.config.should.have.property('foo', 'bar');
+  });
 
-  // it('should equal', function () {
-  //   var store = new Store();
+  it('should `.set()` a value on the store', function () {
+    store = new Store('aaa');
+    store.set('one', 'two');
+    store.config.one.should.equal('two');
+  });
 
-  //   store({a: 'b'}).should.eql({a: 'b'});
-  //   store('abc').should.equal('abc');
-  // });
+  it('should return true if a key `.exists()` on the store', function () {
+    store = new Store('eee');
+    store.set('ggg', 'fff');
+    store.exists('ggg').should.be.true;
+  });
 
-  // it('should have property.', function () {
-  //   store({a: 'b'}).should.have.property('a', 'b');
-  // });
+  it('should `.get()` a stored value', function () {
+    store = new Store('bbb');
+    store.set('three', 'four');
+    store.get('three').should.equal('four');
+  });
+
+  it('should `.omit()` a stored value', function () {
+    store = new Store('ccc');
+    store.set('a', 'b');
+    store.set('c', 'd');
+    store.omit('a');
+    store.should.not.have.property('a');
+  });
+
+  it('should `.omit()` multiple stored values', function () {
+    store = new Store('ddd');
+    store.set('a', 'b');
+    store.set('c', 'd');
+    store.set('e', 'f');
+    store.omit(['a', 'c', 'e']);
+    store.config.should.eql({});
+  });
 });
-
-// var store = new Store('foo');
-
-// store
-//   .set('a', 'b')
-//   .set('c', 'd')
-//   .set('e', 'f');
-
-// store.save();
-// store.omit('a');
-
-// console.log(store.get());
