@@ -3,6 +3,7 @@
 var path = require('path');
 var typeOf = require('kind-of');
 var fs = require('graceful-fs');
+var del = require('delete');
 var _ = require('lodash');
 
 /**
@@ -24,7 +25,7 @@ module.exports =  Store;
  * ```
  *
  * @param  {String} `name` Dest file name. `foo` would result in `.foo.json`
- * @param  {String} `dest` Dest directory. If not defined, the user home directory
+ * @param  {String} `dest` Dest directory. If not defined, the user userhome directory
  *                         for the current OS is used.
  * @api public
  */
@@ -33,8 +34,16 @@ function Store(name, dest) {
   if (typeof name !== 'string') {
     throw new Error('data-store expects a string as the first argument.');
   }
-  this.path = path.join((dest || home('data-store')), '.' + name + '.json');
-  this.config = readFile(this.path) || {};
+
+  this.name = name;
+  this.userhome = userhome('data-store');
+  this.path = path.join((dest || this.userhome), filename(name));
+  this.config = read(this.path) || {};
+
+  this.pending = false;
+
+  this._throttledSave = _.debounce(_.bind(this.forceSave, this), 5);
+  this.config = read(this.path)[this.name] || {};
 }
 
 /**
@@ -89,6 +98,24 @@ Store.prototype.get = function(key) {
 };
 
 /**
+ * Returns `true` if the specified `key` exists.
+ *
+ * ```js
+ * store.set('foo', 'bar');
+ * store.exists('foo');
+ * //=> true
+ * ```
+ *
+ * @param  {String} `key`
+ * @return {Boolean} Returns true if `key` exists
+ * @api public
+ */
+
+Store.prototype.exists = function(key) {
+  return this.config.hasOwnProperty(key);
+};
+
+/**
  * Save the store to disk.
  *
  * ```js
@@ -128,16 +155,46 @@ Store.prototype.omit = function(keys) {
 };
 
 /**
+ * Delete the store.
+ *
+ * ```js
+ * store.delete();
+ * ```
+ *
+ * @api public
+ */
+
+Store.prototype.delete = function(name) {
+  var fp = name
+    ? this.userhome + '/' + filename(name)
+    : this.path;
+
+  del(fp, {force: true});
+};
+
+/**
  * Get the user's home directory
  *
  * @api private
  */
 
-function home(fp) {
+function userhome(fp) {
   var res = (process.platform === 'win32')
     ? process.env.USERPROFILE
     : process.env.HOME;
   return path.join(res, fp);
+}
+
+/**
+ * Make a filename from the given `name`.
+ *
+ * @param {String} `name`
+ * @return {String}
+ * @api private
+ */
+
+function filename(name) {
+  return '.' + name + '.json';
 }
 
 /**
@@ -148,7 +205,7 @@ function home(fp) {
  * @api private
  */
 
-function readFile(fp) {
+function read(fp) {
   try {
     return require(path.resolve(fp));
   } catch(err) {}
@@ -164,7 +221,7 @@ function readFile(fp) {
  * @api private
  */
 
-function writeJson(dest, str, opts) {
+function writeJson(dest, str) {
   var dir = path.dirname(dest);
   if (!fs.existsSync(dir)) {
     mkdir(dir);
@@ -174,7 +231,7 @@ function writeJson(dest, str, opts) {
     var json = JSON.stringify(str, null, 2);
     fs.writeFileSync(dest, json);
   } catch (err) {
-    console.log(err);
+    throw err;
   }
 }
 

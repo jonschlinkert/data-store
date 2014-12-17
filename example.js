@@ -1,6 +1,6 @@
 'use strict';
 
-var Store = require('./async');
+var Store = require('./');
 var store = new Store('app');
 
 store
@@ -8,7 +8,7 @@ store
   .set('c', 'd')
   .set('e', 'f');
 
-store.save('app.json');
+store.save('actual/app.json');
 
 console.log(store.get());
 store.delete();

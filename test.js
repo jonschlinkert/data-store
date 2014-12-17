@@ -18,7 +18,7 @@ describe('store', function () {
 
     store.set('foo', 'bar');
     store.should.have.property('name', 'abc');
-    console.log(store)
+    store.delete();
   });
 
   // it('should create a store at the given `dest`', function () {

@@ -41,6 +41,7 @@
     "verb"
   ],
   "dependencies": {
+    "delete": "^0.1.5",
     "graceful-fs": "^3.0.4",
     "kind-of": "^0.1.2",
     "lodash": "^2.4.1"
