@@ -37,7 +37,7 @@ console.log(store.get());
 ```
 
 ## API
-### [Store](index.js#L34)
+### [Store](index.js#L33)
 
 Initialize a new `Store` with the given `name` and `options`.
 
@@ -52,7 +52,7 @@ var store = new Store('baz');
 //=> '~/data-store/.baz.json'
 ```
 
-### [.set](index.js#L57)
+### [.set](index.js#L56)
 
 Assign `value` to `key` and save to disk. Can be a key-value pair or an object.
 
@@ -66,7 +66,7 @@ store.set('foo', 'bar');
 store.set({foo: 'bar'});
 ```
 
-### [.get](index.js#L87)
+### [.get](index.js#L86)
 
 Get the stored `value` of `key`, or return all stored values if no `key` is defined.
 
@@ -79,7 +79,7 @@ store.get('foo');
 //=> 'bar'
 ```
 
-### [.exists](index.js#L108)
+### [.exists](index.js#L107)
 
 Returns `true` if the specified `key` exists.
 
@@ -92,7 +92,7 @@ store.exists('foo');
 //=> true
 ```
 
-### [.save](index.js#L122)
+### [.save](index.js#L121)
 
 Save the store to disk.
 
@@ -102,7 +102,7 @@ Save the store to disk.
 store.save();
 ```
 
-### [.omit](index.js#L141)
+### [.omit](index.js#L140)
 
 Delete a property or array of properties from the store then re-save the store.
 
@@ -115,13 +115,14 @@ store.omit('foo');
 store.omit(['foo', 'bar']);
 ```
 
-### [.delete](index.js#L163)
+### [.delete](index.js#L162)
 
 Delete the entire store. You must pass `{force: true}` if the path is outside the current working directory.
 
 ```js
 store.delete({force: true});
 ```
+
 
 
 ## Contributing

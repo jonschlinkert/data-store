@@ -26,8 +26,7 @@ module.exports =  Store;
  * ```
  *
  * @param  {String} `name` Store name. `foo` would result in `.foo.json`
- * @param  {String} `base` Dest base. If not defined, the user home directory
- *                         is used, based on OS.
+ * @param  {String} `base` Dest base. If not defined, the user home directory is used, based on OS.
  * @api public
  */
 
