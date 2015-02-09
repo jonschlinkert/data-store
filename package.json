@@ -1,7 +1,7 @@
 {
   "name": "data-store",
   "description": "Easily get, set and persist config data.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "homepage": "https://github.com/jonschlinkert/data-store",
   "author": {
     "name": "Jon Schlinkert",
@@ -16,14 +16,15 @@
   },
   "license": {
     "type": "MIT",
-    "url": "https://github.com/jonschlinkert/data-store/blob/master/LICENSE-MIT"
+    "url": "https://github.com/jonschlinkert/data-store/blob/master/LICENSE"
   },
+  "files": ["index.js"],
   "main": "index.js",
   "engines": {
     "node": ">=0.10.0"
   },
   "scripts": {
-    "test": "mocha -R spec"
+    "test": "mocha"
   },
   "dependencies": {
     "clone-deep": "^0.1.1",
