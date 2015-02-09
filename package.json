@@ -1,7 +1,7 @@
 {
   "name": "data-store",
   "description": "Easily get, set and persist config data.",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "homepage": "https://github.com/jonschlinkert/data-store",
   "author": {
     "name": "Jon Schlinkert",
