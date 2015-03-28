@@ -1,14 +1,14 @@
 /*!
  * data-store <https://github.com/jonschlinkert/data-store>
  *
- * Copyright (c) 2014 Jon Schlinkert, contributors.
- * Licensed under the MIT License
+ * Copyright (c) 2014-2015, Jon Schlinkert.
+ * Licensed under the MIT License.
  */
 
 'use strict';
 
-var assert = require('assert');
-var should = require('should');
+require('should');
+var path = require('path');
 var Store = require('./');
 var store;
 
@@ -16,37 +16,63 @@ describe('store', function () {
   afterEach(function () {
     store.delete({force: true});
   });
+
   it('should create a store with the given `name`', function () {
     store = new Store('abc');
 
     store.set('foo', 'bar');
-    store.config.should.have.property('foo', 'bar');
+    store.data.should.have.property('foo', 'bar');
   });
 
   it('should create a store at the given `cwd`', function () {
     store = new Store('abc', 'actual');
 
     store.set('foo', 'bar');
-    store.path.should.equal('actual/.data.abc.json');
-    store.config.should.have.property('foo', 'bar');
+    path.basename(store.path).should.equal('abc.json');
+    store.data.should.have.property('foo', 'bar');
   });
 
   it('should `.set()` a value on the store', function () {
     store = new Store('aaa');
     store.set('one', 'two');
-    store.config.one.should.equal('two');
+    store.data.one.should.equal('two');
   });
 
-  it('should return true if a key `.exists()` on the store', function () {
+  it('should `.set()` an object', function () {
+    store = new Store('aaa');
+    store.set({four: 'five', six: 'seven'});
+    store.data.four.should.equal('five');
+    store.data.six.should.equal('seven');
+  });
+
+  it('should `.set()` a nested value', function () {
+    store = new Store('aaa');
+    store.set('a.b.c.d', {e: 'f'});
+    store.data.a.b.c.d.e.should.equal('f');
+  });
+
+  it('should return true if a key `.has()` on the store', function () {
     store = new Store('eee');
     store.set('ggg', 'fff');
-    store.exists('ggg').should.be.true;
+    store.has('ggg').should.be.true;
+  });
+
+  it('should return true if a nested key `.has()` on the store', function () {
+    store = new Store('xxx');
+    store.set('a.b.c.d', {x: 'zzz'});
+    store.has('a.b.c.d.x').should.be.true;
   });
 
   it('should `.get()` a stored value', function () {
     store = new Store('bbb');
     store.set('three', 'four');
     store.get('three').should.equal('four');
+  });
+
+  it('should `.get()` a nested value', function () {
+    store = new Store('bbb');
+    store.set({a: {b: {c: 'd'}}});
+    store.get('a.b.c').should.equal('d');
   });
 
   it('should `.omit()` a stored value', function () {
@@ -63,6 +89,6 @@ describe('store', function () {
     store.set('c', 'd');
     store.set('e', 'f');
     store.omit(['a', 'c', 'e']);
-    store.config.should.eql({});
+    store.data.should.eql({});
   });
 });
