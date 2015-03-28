@@ -1,11 +1,14 @@
 'use strict';
 
-var path = require('path');
 var fs = require('graceful-fs');
+var path = require('path');
 var typeOf = require('kind-of');
-var extend = require('extend-shallow');
-var cloneDeep = require('clone-deep');
-var del = require('delete');
+var merge = require('mixin-deep');
+var mkdir = require('mkdirp');
+var get = require('get-value');
+var set = require('set-value');
+var has = require('has-value');
+var del = require('rimraf');
 
 /**
  * Expose `Store`
@@ -18,24 +21,30 @@ module.exports =  Store;
  * and `options`.
  *
  * ```js
- * var store = new Store('bar', 'foo');
- * //=> './foo/.bar.json'
+ * var store = new Store('abc');
+ * //=> '~/data-store/a.json'
  *
- * var store = new Store('baz');
- * //=> '~/data-store/.baz.json'
+ * var store = new Store('abc', {cwd: 'test/fixtures'});
+ * //=> './test/fixtures/abc.json'
  * ```
  *
- * @param  {String} `name` Store name. `foo` would result in `.foo.json`
- * @param  {String} `base` Dest base. If not defined, the user home directory is used, based on OS.
+ * @param  {String} `name` Store name.
+ * @param  {Object} `options`
+ *   @option {String} [options] `cwd` Current working directory for storage. If not defined, the user home directory is used, based on OS. This is the only option currently, other may be added in the future.
  * @api public
  */
 
-function Store(name, base) {
+function Store(name, options) {
   if (typeof name !== 'string') {
     throw new Error('data-store expects a string as the first argument.');
   }
-  this.path = path.join((base || home('data-store')), '.data.' + name + '.json');
-  this.config = readFile(this.path) || {};
+
+  options = options || {};
+  var cwd = options.cwd || home('data-store');
+
+  this.name = name;
+  this.path = path.join(cwd, name + '.json');
+  this.data = readFile(this.path) || {};
 }
 
 /**
@@ -43,9 +52,23 @@ function Store(name, base) {
  * a key-value pair or an object.
  *
  * ```js
- * store.set('foo', 'bar');
- * // or
- * store.set({foo: 'bar'});
+ * // key, value
+ * store.set('a', 'b');
+ * //=> {a: 'b'}
+ *
+ * // extend the store with an object
+ * store.set({a: 'b'});
+ * //=> {a: 'b'}
+ *
+ * // extend the the given value
+ * store.set('a', {b: 'c'});
+ * store.set('a', {d: 'e'}, true);
+ * //=> {a: {b 'c', d: 'e'}}
+ *
+ * // overwrite the the given value
+ * store.set('a', {b: 'c'});
+ * store.set('a', {d: 'e'});
+ * //=> {d: 'e'}
  * ```
  * @param {String} `key`
  * @param {*} `val` The value to save to `key`. Must be a valid JSON type: String, Number, Array or Object.
@@ -55,71 +78,79 @@ function Store(name, base) {
 
 Store.prototype.set = function(key, val) {
   if (typeof val === 'function') {
-    throw new Error('Store#set cannot set functions as values:' + String(val));
+    throw new Error('Store#set cannot set functions as values: ' + val.toString());
   }
 
   if (typeOf(key) === 'object') {
-    extend(this.config, key);
+    merge(this.data, key);
+  } else if (typeOf(val) === 'object') {
+    set(this.data, key, merge(this.get(key) || {}, val));
   } else {
-    this.config[key] = val;
+    set(this.data, key, val);
   }
 
-  this.save();
+  // this.save();
   return this;
 };
 
 /**
- * Get the stored `value` of `key`, or return all stored values
+ * Get the stored `value` of `key`, or return the entire store
  * if no `key` is defined.
  *
  * ```js
- * store.set('foo', 'bar');
- * store.get('foo');
- * //=> 'bar'
+ * store.set('a', {b: 'c'});
+ * store.get('a');
+ * //=> {b: 'c'}
+ *
+ * store.get();
+ * //=> {b: 'c'}
  * ```
  *
  * @param  {String} `key`
- * @return {*} The stored value of `key`.
+ * @return {*} The value to store for `key`.
  * @api public
  */
 
-Store.prototype.get = function(key) {
-  if (!key) {
-    return cloneDeep(this.config);
-  }
-  return this.config[key];
+Store.prototype.get = function (key) {
+  return key ? get(this.data, key) : {
+    name: this.name,
+    data: this.data
+  };
 };
 
 /**
- * Returns `true` if the specified `key` exists.
+ * Returns `true` if the specified `key` has.
  *
  * ```js
- * store.set('foo', 'bar');
- * store.exists('foo');
+ * store.set('a', 'b');
+ * store.has('a');
  * //=> true
  * ```
  *
  * @param  {String} `key`
- * @return {Boolean} Returns true if `key` exists
+ * @return {Boolean} Returns true if `key` has
  * @api public
  */
 
-Store.prototype.exists = function(key) {
-  return this.config.hasOwnProperty(key);
+Store.prototype.has = function(key) {
+  if (key.indexOf('.') === -1) {
+    return this.data.hasOwnProperty(key);
+  }
+  return has(this.data, key);
 };
 
 /**
- * Save the store to disk.
+ * Persist the store to disk.
  *
  * ```js
  * store.save();
  * ```
- * @param {String} `dest` Optionally define an alternate destination.
+ * @param {String} `dest` Optionally define an alternate destination file path.
  * @api public
  */
 
 Store.prototype.save = function(dest) {
-  writeJson(dest || this.path, this.config);
+  writeJson(dest || this.path, this.data);
 };
 
 /**
@@ -127,9 +158,11 @@ Store.prototype.save = function(dest) {
  * re-save the store.
  *
  * ```js
- * store.omit('foo');
- * // or
- * store.omit(['foo', 'bar']);
+ * // string
+ * store.omit('a');
+ *
+ * // array
+ * store.omit(['a', 'b']);
  * ```
  *
  * @param {String|Array} `key` The key(s) to omit from the store
@@ -139,20 +172,23 @@ Store.prototype.save = function(dest) {
 
 Store.prototype.omit = function(keys) {
   keys = [].concat.apply([], arguments);
-
   for (var i = 0; i < keys.length; i++) {
-    delete this.config[keys[i]];
+    delete this.data[keys[i]];
   }
-
   this.save();
   return this;
 };
 
 /**
- * Delete the entire store. You must pass `{force: true}` if
- * the path is outside the current working directory.
+ * Delete the entire store.
+ *
+ * **Note that you must pass `{force: true}` to delete
+ * paths outside the current working directory.**
  *
  * ```js
+ * store.delete();
+ *
+ * // to delete paths outside cwd
  * store.delete({force: true});
  * ```
  *
@@ -160,13 +196,17 @@ Store.prototype.omit = function(keys) {
  */
 
 Store.prototype.delete = function(options) {
-  del.sync(this.path, options);
+  del(this.path, options, function (err) {
+    if (err) return console.log(err);
+    this.data = {};
+  }.bind(this));
 };
 
 /**
  * Get the user's home directory
  *
- * @api private
+ * @param {String} `fp`
+ * @return {String}
  */
 
 function home(fp) {
@@ -181,12 +221,12 @@ function home(fp) {
  *
  * @param {String} `fp`
  * @return {Object}
- * @api private
  */
 
 function readFile(fp) {
   try {
-    return require(path.resolve(fp));
+    var str = fs.readFileSync(path.resolve(fp), 'utf8');
+    return JSON.parse(str);
   } catch(err) {}
   return {};
 }
@@ -197,44 +237,17 @@ function readFile(fp) {
  *
  * @param {String} `dest`
  * @param {String} `str`
- * @api private
  */
 
-function writeJson(dest, str, indent) {
+function writeJson(dest, str) {
   var dir = path.dirname(dest);
-  if (!fs.existsSync(dir)) {
-    mkdir(dir);
-  }
-
   try {
-    var json = JSON.stringify(str, null, indent || 2);
-    fs.writeFileSync(dest, json);
-  } catch (err) {
-    console.log(err);
-    return;
-  }
-}
-
-/**
- * Make the given directory and intermediates
- * if they don't already exist.
- *
- * @param {String} `dirpath`
- * @param {Number} `mode`
- * @return {String}
- * @api private
- */
-
-function mkdir(dir, mode) {
-  mode = mode || parseInt('0777', 8) & (~process.umask());
-  if (!fs.existsSync(dir)) {
-    var parent = path.dirname(dir);
-
-    if (fs.existsSync(parent)) {
-      fs.mkdirSync(dir, mode);
-    } else {
-      mkdir(parent);
-      fs.mkdirSync(dir, mode);
+    if (!fs.existsSync(dir)) {
+      mkdir.sync(dir);
     }
+    fs.writeFileSync(dest, JSON.stringify(str, null, 2));
+  } catch (err) {
+    err.origin = __filename;
+    throw new Error('data-store: ' + err);
   }
 }
