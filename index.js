@@ -89,7 +89,7 @@ Store.prototype.set = function(key, val) {
     set(this.data, key, val);
   }
 
-  // this.save();
+  this.save();
   return this;
 };
 
