@@ -9,6 +9,7 @@
 
 require('should');
 var path = require('path');
+var assert = require('assert');
 var Store = require('./');
 var store;
 
@@ -90,5 +91,70 @@ describe('store', function () {
     store.set('e', 'f');
     store.omit(['a', 'c', 'e']);
     store.data.should.eql({});
+  });
+});
+
+describe('events', function () {
+  it('should emit `set` when an object is set:', function () {
+    store = new Store('bbb');
+    var res;
+
+    store.on('set', function (keys) {
+      keys.should.eql(['a']);
+    });
+
+    store.set({a: {b: {c: 'd'}}});
+  });
+
+  it('should emit `set` when a key/value pair is set:', function () {
+    store = new Store('bbb');
+    var res;
+
+    store.on('set', function (keys) {
+      keys.should.eql(['a']);
+    });
+
+    store.set('a', 'b');
+  });
+
+  it('should emit `set` when an object value is set:', function () {
+    store = new Store('bbb');
+    var res;
+
+    store.on('set', function (keys) {
+      keys.should.eql(['a']);
+    });
+
+    store.set('a', {b: 'c'});
+  });
+
+  it('should emit `omit` when a value is omitted:', function () {
+    store = new Store('bbb');
+    var res;
+
+    store.on('omit', function (keys) {
+      keys.should.eql(['a']);
+      assert(typeof store.get('a') === 'undefined');
+    });
+
+    store.set('a', {b: 'c'});
+    store.get('a').should.eql({b: 'c'});
+    store.omit('a');
+  });
+
+  it('should emit the store keys on `delete`:', function () {
+    store = new Store('bbb');
+    var res;
+
+    store.on('delete', function (keys) {
+      keys.should.eql(['a', 'c', 'e']);
+      assert(Object.keys(store.data).length === 0);
+    });
+
+    store.set('a', 'b');
+    store.set('c', 'd');
+    store.set('e', 'f');
+    store.data.should.have.properties(['a', 'c', 'e']);
+    store.delete({force: true});
   });
 });
