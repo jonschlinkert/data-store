@@ -2,9 +2,12 @@
 
 var fs = require('graceful-fs');
 var path = require('path');
+var util = require('util');
 var typeOf = require('kind-of');
 var merge = require('mixin-deep');
+var Emitter = require('component-emitter');
 var mkdir = require('mkdirp');
+var union = require('arr-union');
 var get = require('get-value');
 var set = require('set-value');
 var has = require('has-value');
@@ -39,6 +42,7 @@ function Store(name, options) {
     throw new Error('data-store expects a string as the first argument.');
   }
 
+  Emitter.call(this);
   options = options || {};
   var cwd = options.cwd || home('data-store');
 
@@ -46,6 +50,8 @@ function Store(name, options) {
   this.path = path.join(cwd, name + '.json');
   this.data = readFile(this.path) || {};
 }
+
+util.inherits(Store, Emitter);
 
 /**
  * Assign `value` to `key` and save to disk. Can be
@@ -81,14 +87,24 @@ Store.prototype.set = function(key, val) {
     throw new Error('Store#set cannot set functions as values: ' + val.toString());
   }
 
+  var arr = [];
   if (typeOf(key) === 'object') {
-    merge(this.data, key);
+    var args = [].slice.call(arguments);
+    arr = [].concat.apply([], args.map(keys));
+    merge.apply(merge, [this.data].concat(args));
   } else if (typeOf(val) === 'object') {
-    set(this.data, key, merge(this.get(key) || {}, val));
+    arr = [key];
+    var value = this.get(key);
+    if (typeOf(value) !== 'object') {
+      value = {};
+    }
+    set(this.data, key, merge({}, value, val));
   } else {
+    arr = [key];
     set(this.data, key, val);
   }
 
+  this.emit('set', arr);
   this.save();
   return this;
 };
@@ -175,6 +191,8 @@ Store.prototype.omit = function(keys) {
   for (var i = 0; i < keys.length; i++) {
     delete this.data[keys[i]];
   }
+
+  this.emit('omit', keys);
   this.save();
   return this;
 };
@@ -196,9 +214,12 @@ Store.prototype.omit = function(keys) {
  */
 
 Store.prototype.delete = function(options) {
+  var keys = Object.keys(this.data);
+
   del(this.path, options, function (err) {
     if (err) return console.log(err);
     this.data = {};
+    this.emit('delete', keys);
   }.bind(this));
 };
 
@@ -229,6 +250,16 @@ function readFile(fp) {
     return JSON.parse(str);
   } catch(err) {}
   return {};
+}
+
+/**
+ * Get the keys of an object
+ *
+ * @return {Array}
+ */
+
+function keys(obj) {
+  return Object.keys(obj);
 }
 
 /**
