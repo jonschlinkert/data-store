@@ -25,7 +25,3 @@ trim_trailing_whitespace = false
 [test/fixtures/*]
 trim_trailing_whitespace = false
 insert_final_newline = false
-
-[example.js]
-trim_trailing_whitespace = true
-insert_final_newline = false
