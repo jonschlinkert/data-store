@@ -2,7 +2,9 @@
 
 > Easily get, set and persist config data.
 
-## Install with [npm](npmjs.org)
+## Install
+
+Install with [npm](https://www.npmjs.com/)
 
 ```bash
 npm i data-store --save
@@ -31,14 +33,19 @@ console.log(store.data);
 ```
 
 ## API
+
 ### [Store](index.js#L40)
 
 Initialize a new `Store` with the given `name` and `options`.
 
-* `name` **{String}**: Store name.    
-* `options` **{Object}**  
-    - `cwd` **{String}**: Current working directory for storage. If not defined, the user home directory is used, based on OS. This is the only option currently, other may be added in the future.
-      
+**Params**
+
+* `name` **{String}**: Store name.
+* `options` **{Object}**
+
+- `cwd` **{String}**: Current working directory for storage. If not defined, the user home directory is used, based on OS. This is the only option currently, other may be added in the future.
+
+**Example**
 
 ```js
 var store = new Store('abc');
@@ -52,9 +59,13 @@ var store = new Store('abc', {cwd: 'test/fixtures'});
 
 Assign `value` to `key` and save to disk. Can be a key-value pair or an object.
 
-* `key` **{String}**    
-* `val` **{*}**: The value to save to `key`. Must be a valid JSON type: String, Number, Array or Object.    
-* `returns` **{Object}** `Store`: for chaining  
+**Params**
+
+* `key` **{String}**
+* `val` **{any}**: The value to save to `key`. Must be a valid JSON type: String, Number, Array or Object.
+* `returns` **{Object}** `Store`: for chaining
+
+**Example**
 
 ```js
 // key, value
@@ -80,8 +91,12 @@ store.set('a', {d: 'e'});
 
 Get the stored `value` of `key`, or return the entire store if no `key` is defined.
 
-* `key` **{String}**    
-* `returns` **{*}**: The value to store for `key`.  
+**Params**
+
+* `key` **{String}**
+* `returns` **{any}**: The value to store for `key`.
+
+**Example**
 
 ```js
 store.set('a', {b: 'c'});
@@ -96,8 +111,12 @@ store.get();
 
 Returns `true` if the specified `key` has.
 
-* `key` **{String}**    
-* `returns` **{Boolean}**: Returns true if `key` has  
+**Params**
+
+* `key` **{String}**
+* `returns` **{Boolean}**: Returns true if `key` has
+
+**Example**
 
 ```js
 store.set('a', 'b');
@@ -109,7 +128,11 @@ store.has('a');
 
 Persist the store to disk.
 
-* `dest` **{String}**: Optionally define an alternate destination file path.    
+**Params**
+
+* `dest` **{String}**: Optionally define an alternate destination file path.
+
+**Example**
 
 ```js
 store.save();
@@ -119,8 +142,12 @@ store.save();
 
 Delete a property or array of properties from the store then re-save the store.
 
-* `key` **{String|Array}**: The key(s) to omit from the store    
-* `returns` **{Object}** `Store`: for chaining  
+**Params**
+
+* `key` **{String|Array}**: The key(s) to omit from the store
+* `returns` **{Object}** `Store`: for chaining
+
+**Example**
 
 ```js
 // string
@@ -130,24 +157,38 @@ store.omit('a');
 store.omit(['a', 'b']);
 ```
 
-### [.delete](index.js#L216)
+### [.del](index.js#L216)
 
 Delete the entire store.
 
 **Note that you must pass `{force: true}` to delete
 paths outside the current working directory.**
 
+**Example**
+
 ```js
-store.delete();
+store.del();
 
 // to delete paths outside cwd
-store.delete({force: true});
+store.del({force: true});
 ```
 
+## Related
+
+* [config-cache](https://github.com/jonschlinkert/config-cache): General purpose JavaScript object storage methods.
+* [cache-base](https://github.com/jonschlinkert/cache-base): Generic object cache for node.js/javascript projects.
+* [get-value](https://github.com/jonschlinkert/get-value): Use property paths (`  a.b.c`) get a nested value from an object.
+* [has-value](https://github.com/jonschlinkert/has-value): Returns true if a value exists, false if empty. Works with deeply nested values using… [more](https://github.com/jonschlinkert/has-value)
+* [map-cache](https://github.com/jonschlinkert/map-cache): Basic cache object for storing key-value pairs.
+* [option-cache](https://github.com/jonschlinkert/option-cache): Simple API for managing options in JavaScript applications.
+* [set-value](https://github.com/jonschlinkert/set-value): Create nested values and any intermediaries using dot notation (`'a.b.c'`) paths.
+
 ## Contributing
-Pull requests and stars are always welcome. For bugs and feature requests, [please create an issue](https://github.com/jonschlinkert/data-store/issues)
+
+Pull requests and stars are always welcome. For bugs and feature requests, [please create an issue](https://github.com/jonschlinkert/data-store/issues/new)
 
 ## Running tests
+
 Install dev dependencies:
 
 ```bash
@@ -159,25 +200,15 @@ npm i -d && npm test
 **Jon Schlinkert**
 
 + [github/jonschlinkert](https://github.com/jonschlinkert)
-+ [twitter/jonschlinkert](http://twitter.com/jonschlinkert) 
++ [twitter/jonschlinkert](http://twitter.com/jonschlinkert)
 
 ## License
-Copyright (c) 2015 Jon Schlinkert  
-Released under the MIT license
+
+Copyright (c) 2015 Jon Schlinkert
+Released under the MIT license.
 
 ***
 
-_This file was generated by [verb-cli](https://github.com/assemble/verb-cli) on April 19, 2015._
+_This file was generated by [verb-cli](https://github.com/assemble/verb-cli) on May 07, 2015._
+
 <!-- deps: mocha should -->
-
-[arr-union]: https://github.com/jonschlinkert/arr-union
-[emitter]: https://github.com/component/emitter
-[get-value]: https://github.com/jonschlinkert/get-value
-[node-graceful-fs]: https://github.com/isaacs/node-graceful-fs
-[has-value]: https://github.com/jonschlinkert/has-value
-[kind-of]: https://github.com/jonschlinkert/kind-of
-[mixin-deep]: https://github.com/jonschlinkert/mixin-deep
-[node-mkdirp]: https://github.com/substack/node-mkdirp
-[rimraf]: https://github.com/isaacs/rimraf
-[set-value]: https://github.com/jonschlinkert/set-value
-

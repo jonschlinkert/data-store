@@ -77,7 +77,7 @@ util.inherits(Store, Emitter);
  * //=> {d: 'e'}
  * ```
  * @param {String} `key`
- * @param {*} `val` The value to save to `key`. Must be a valid JSON type: String, Number, Array or Object.
+ * @param {any} `val` The value to save to `key`. Must be a valid JSON type: String, Number, Array or Object.
  * @return {Object} `Store` for chaining
  * @api public
  */
@@ -123,7 +123,7 @@ Store.prototype.set = function(key, val) {
  * ```
  *
  * @param  {String} `key`
- * @return {*} The value to store for `key`.
+ * @return {any} The value to store for `key`.
  * @api public
  */
 
