@@ -204,22 +204,22 @@ Store.prototype.omit = function(keys) {
  * paths outside the current working directory.**
  *
  * ```js
- * store.delete();
+ * store.del();
  *
  * // to delete paths outside cwd
- * store.delete({force: true});
+ * store.del({force: true});
  * ```
  *
  * @api public
  */
 
-Store.prototype.delete = function(options) {
+Store.prototype.del = function(options) {
   var keys = Object.keys(this.data);
 
   del(this.path, options, function (err) {
     if (err) return console.log(err);
     this.data = {};
-    this.emit('delete', keys);
+    this.emit('del', keys);
   }.bind(this));
 };
 

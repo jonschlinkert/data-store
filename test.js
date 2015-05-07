@@ -15,7 +15,7 @@ var store;
 
 describe('store', function () {
   afterEach(function () {
-    store.delete({force: true});
+    store.del({force: true});
   });
 
   it('should create a store with the given `name`', function () {
@@ -142,11 +142,11 @@ describe('events', function () {
     store.omit('a');
   });
 
-  it('should emit the store keys on `delete`:', function () {
+  it('should emit deleted keys on `del`:', function () {
     store = new Store('bbb');
     var res;
 
-    store.on('delete', function (keys) {
+    store.on('del', function (keys) {
       keys.should.eql(['a', 'c', 'e']);
       assert(Object.keys(store.data).length === 0);
     });
@@ -155,6 +155,6 @@ describe('events', function () {
     store.set('c', 'd');
     store.set('e', 'f');
     store.data.should.have.properties(['a', 'c', 'e']);
-    store.delete({force: true});
+    store.del({force: true});
   });
 });
