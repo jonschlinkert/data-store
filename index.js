@@ -1,17 +1,30 @@
 'use strict';
 
-var fs = require('graceful-fs');
+/**
+ * Module dependencies
+ */
+
 var path = require('path');
 var util = require('util');
 var typeOf = require('kind-of');
-var merge = require('mixin-deep');
+var omit = require('object.omit');
+var extend = require('extend-shallow');
 var Emitter = require('component-emitter');
-var mkdir = require('mkdirp');
-var union = require('arr-union');
 var get = require('get-value');
 var set = require('set-value');
 var has = require('has-value');
-var del = require('rimraf');
+var union = require('union-value');
+var visit = require('object-visit');
+var mapVisit = require('map-visit');
+
+/**
+ * Lazily required modules
+ */
+
+var lazy = require('lazy-cache')(require);
+var fs = lazy('graceful-fs');
+var del = lazy('rimraf');
+var mkdir = lazy('mkdirp');
 
 /**
  * Expose `Store`
@@ -87,25 +100,43 @@ Store.prototype.set = function(key, val) {
     throw new Error('Store#set cannot set functions as values: ' + val.toString());
   }
 
-  var arr = [];
   if (typeOf(key) === 'object') {
-    var args = [].slice.call(arguments);
-    arr = [].concat.apply([], args.map(keys));
-    merge.apply(merge, [this.data].concat(args));
+    return this.visit('set', key);
+
+  } else if (Array.isArray(key)) {
+    return this.mapVisit('set', key);
+
   } else if (typeOf(val) === 'object') {
-    arr = [key];
-    var value = this.get(key);
-    if (typeOf(value) !== 'object') {
-      value = {};
-    }
-    set(this.data, key, merge({}, value, val));
-  } else {
-    arr = [key];
-    set(this.data, key, val);
+    var existing = this.get(key);
+    val = extend({}, existing, val);
   }
 
-  this.emit('set', arr);
+  set(this.data, key, val);
+  this.emit('set', key, val);
+
   this.save();
+  return this;
+};
+
+/**
+ * Add or append an array of unique values to the given `key`.
+ *
+ * ```js
+ * store.union('a', ['a']);
+ * store.union('a', ['b']);
+ * store.union('a', ['c']);
+ * store.get('a');
+ * //=> ['a', 'b', 'c']
+ * ```
+ *
+ * @param  {String} `key`
+ * @return {any} The array to add or append for `key`.
+ * @api public
+ */
+
+Store.prototype.union = function (key, val) {
+  union(this.data, key, val);
+  this.emit('union', key, val);
   return this;
 };
 
@@ -170,38 +201,10 @@ Store.prototype.save = function(dest) {
 };
 
 /**
- * Delete a property or array of properties from the store then
- * re-save the store.
+ * Delete `keys` from the store, or delete the entire store
+ * if no keys are passed.
  *
- * ```js
- * // string
- * store.omit('a');
- *
- * // array
- * store.omit(['a', 'b']);
- * ```
- *
- * @param {String|Array} `key` The key(s) to omit from the store
- * @return {Object} `Store` for chaining
- * @api public
- */
-
-Store.prototype.omit = function(keys) {
-  keys = [].concat.apply([], arguments);
-  for (var i = 0; i < keys.length; i++) {
-    delete this.data[keys[i]];
-  }
-
-  this.emit('omit', keys);
-  this.save();
-  return this;
-};
-
-/**
- * Delete the entire store.
- *
- * **Note that you must pass `{force: true}` to delete
- * paths outside the current working directory.**
+ * **Note that to delete the entire store you must pass `{force: true}`**
  *
  * ```js
  * store.del();
@@ -210,17 +213,57 @@ Store.prototype.omit = function(keys) {
  * store.del({force: true});
  * ```
  *
+ * @param {String|Array|Object} `keys` Keys to remove, or options.
+ * @param {Object} `options`
  * @api public
  */
 
-Store.prototype.del = function(options) {
-  var keys = Object.keys(this.data);
+Store.prototype.del = function(keys, options) {
+  if (typeof keys !== 'string' && !Array.isArray(keys)) {
+    options = keys;
+    keys = [];
+  }
 
-  del(this.path, options, function (err) {
+  // if keys are passed, only omit those properties
+  keys = Array.isArray(keys) ? keys : [keys];
+  if (keys.length) {
+    this.data = omit(this.data, keys);
+    return this;
+  }
+
+  options = options || {};
+
+  // if no keys are passed, delete the entire store
+  del()(this.path, options, function (err) {
     if (err) return console.log(err);
     this.data = {};
     this.emit('del', keys);
   }.bind(this));
+};
+
+/**
+ * Call the given `method` on each property in the given
+ * object.
+ *
+ * @param  {String} `method`
+ * @param  {Object} `object`
+ */
+
+Store.prototype.visit = function(method, object) {
+  visit(this, method, object);
+  return this;
+};
+
+/**
+ * Map `visit` over an array of objects.
+ *
+ * @param  {String} `method`
+ * @param  {Array} `array`
+ */
+
+Store.prototype.mapVisit = function(method, array) {
+  mapVisit(this, method, array);
+  return this;
 };
 
 /**
@@ -246,20 +289,10 @@ function home(fp) {
 
 function readFile(fp) {
   try {
-    var str = fs.readFileSync(path.resolve(fp), 'utf8');
+    var str = fs().readFileSync(path.resolve(fp), 'utf8');
     return JSON.parse(str);
   } catch(err) {}
   return {};
-}
-
-/**
- * Get the keys of an object
- *
- * @return {Array}
- */
-
-function keys(obj) {
-  return Object.keys(obj);
 }
 
 /**
@@ -273,10 +306,10 @@ function keys(obj) {
 function writeJson(dest, str) {
   var dir = path.dirname(dest);
   try {
-    if (!fs.existsSync(dir)) {
-      mkdir.sync(dir);
+    if (!fs().existsSync(dir)) {
+      mkdir().sync(dir);
     }
-    fs.writeFileSync(dest, JSON.stringify(str, null, 2));
+    fs().writeFileSync(dest, JSON.stringify(str, null, 2));
   } catch (err) {
     err.origin = __filename;
     throw new Error('data-store: ' + err);

@@ -7,6 +7,7 @@
 
 'use strict';
 
+/* deps: mocha */
 require('should');
 var path = require('path');
 var assert = require('assert');
@@ -52,6 +53,33 @@ describe('store', function () {
     store.data.a.b.c.d.e.should.equal('f');
   });
 
+  it('should `.union()` a value on the store', function () {
+    store = new Store('aaa');
+    store.union('one', 'two');
+    store.data.one.should.eql(['two']);
+  });
+
+  it('should not union duplicate values', function () {
+    store = new Store('aaa');
+    store.union('one', 'two');
+    store.data.one.should.eql(['two']);
+
+    store.union('one', ['two']);
+    store.data.one.should.eql(['two']);
+  });
+
+  it('should concat an existing array:', function () {
+    store = new Store('aaa');
+    store.union('one', 'a');
+    store.data.one.should.eql(['a']);
+
+    store.union('one', ['b']);
+    store.data.one.should.eql(['a', 'b']);
+
+    store.union('one', ['c', 'd']);
+    store.data.one.should.eql(['a', 'b', 'c', 'd']);
+  });
+
   it('should return true if a key `.has()` on the store', function () {
     store = new Store('eee');
     store.set('ggg', 'fff');
@@ -76,20 +104,20 @@ describe('store', function () {
     store.get('a.b.c').should.equal('d');
   });
 
-  it('should `.omit()` a stored value', function () {
+  it('should `.del()` a stored value', function () {
     store = new Store('ccc');
     store.set('a', 'b');
     store.set('c', 'd');
-    store.omit('a');
+    store.del('a');
     store.should.not.have.property('a');
   });
 
-  it('should `.omit()` multiple stored values', function () {
+  it('should `.del()` multiple stored values', function () {
     store = new Store('ddd');
     store.set('a', 'b');
     store.set('c', 'd');
     store.set('e', 'f');
-    store.omit(['a', 'c', 'e']);
+    store.del(['a', 'c', 'e']);
     store.data.should.eql({});
   });
 });
@@ -97,49 +125,64 @@ describe('store', function () {
 describe('events', function () {
   it('should emit `set` when an object is set:', function () {
     store = new Store('bbb');
-    var res;
+    var keys = [];
 
-    store.on('set', function (keys) {
-      keys.should.eql(['a']);
+    store.on('set', function (key) {
+      keys.push(key);
     });
 
     store.set({a: {b: {c: 'd'}}});
+    keys.should.eql(['a']);
   });
 
   it('should emit `set` when a key/value pair is set:', function () {
     store = new Store('bbb');
-    var res;
+    var keys = [];
 
-    store.on('set', function (keys) {
-      keys.should.eql(['a']);
+    store.on('set', function (key) {
+      keys.push(key);
     });
 
     store.set('a', 'b');
+    keys.should.eql(['a']);
   });
 
   it('should emit `set` when an object value is set:', function () {
     store = new Store('bbb');
-    var res;
+    var keys = [];
 
-    store.on('set', function (keys) {
-      keys.should.eql(['a']);
+    store.on('set', function (key) {
+      keys.push(key);
     });
 
     store.set('a', {b: 'c'});
+    keys.should.eql(['a']);
   });
 
-  it('should emit `omit` when a value is omitted:', function () {
+  it('should emit `set` when an array of objects is passed:', function () {
+    store = new Store('bbb');
+    var keys = [];
+
+    store.on('set', function (key) {
+      keys.push(key);
+    });
+
+    store.set([{a: 'b'}, {c: 'd'}]);
+    keys.should.eql(['a', 'c']);
+  });
+
+  it('should emit `del` when a value is delted:', function () {
     store = new Store('bbb');
     var res;
 
-    store.on('omit', function (keys) {
+    store.on('del', function (keys) {
       keys.should.eql(['a']);
       assert(typeof store.get('a') === 'undefined');
     });
 
     store.set('a', {b: 'c'});
     store.get('a').should.eql({b: 'c'});
-    store.omit('a');
+    store.del('a');
   });
 
   it('should emit deleted keys on `del`:', function () {
