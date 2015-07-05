@@ -1,7 +1,7 @@
 {
   "name": "data-store",
   "description": "Easily get, set and persist config data.",
-  "version": "0.6.1",
+  "version": "0.8.0",
   "homepage": "https://github.com/jonschlinkert/data-store",
   "author": {
     "name": "Jon Schlinkert",
@@ -14,10 +14,7 @@
   "bugs": {
     "url": "https://github.com/jonschlinkert/data-store/issues"
   },
-  "license": {
-    "type": "MIT",
-    "url": "https://github.com/jonschlinkert/data-store/blob/master/LICENSE"
-  },
+  "license": "MIT",
   "files": [
     "index.js"
   ],
@@ -29,28 +26,39 @@
     "test": "mocha"
   },
   "dependencies": {
-    "arr-union": "^2.0.1",
     "component-emitter": "^1.2.0",
+    "extend-shallow": "^2.0.0",
     "get-value": "^1.1.4",
     "graceful-fs": "^3.0.6",
     "has-value": "^0.2.0",
     "kind-of": "^1.1.0",
-    "mixin-deep": "^1.1.0",
+    "lazy-cache": "^0.1.0",
+    "map-visit": "^0.1.0",
     "mkdirp": "^0.5.0",
+    "object-visit": "^0.1.0",
+    "object.omit": "^1.1.0",
     "rimraf": "^2.3.3",
-    "set-value": "^0.1.6"
+    "set-value": "^0.1.6",
+    "union-value": "^0.1.1"
   },
   "devDependencies": {
     "mocha": "*",
     "should": "*"
   },
   "keywords": [
+    "app",
     "cache",
+    "cli",
+    "command",
     "config",
+    "config-store",
+    "configstore",
     "defaults",
-    "fs",
+    "hash",
     "json",
     "local",
+    "object",
+    "options",
     "save",
     "storage",
     "store",
