@@ -30,6 +30,7 @@
     "extend-shallow": "^2.0.0",
     "get-value": "^1.1.4",
     "graceful-fs": "^3.0.6",
+    "has-own-deep": "^0.1.4",
     "has-value": "^0.2.0",
     "kind-of": "^1.1.0",
     "lazy-cache": "^0.1.0",

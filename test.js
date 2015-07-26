@@ -92,6 +92,24 @@ describe('store', function () {
     store.has('a.b.c.d.x').should.be.true;
   });
 
+  it('should return true if a key `.hasOwn()` on the store', function () {
+    store = new Store('eee');
+    store.set('ggg', 'fff');
+    store.set('abc', null);
+    store.hasOwn('ggg').should.be.true;
+    store.hasOwn('abc').should.be.true;
+    store.hasOwn('foo').should.be.false;
+  });
+
+  it('should return true if a nested key `.hasOwn()` on the store', function () {
+    store = new Store('xxx');
+    store.set('a.b.c.d', {x: 'zzz'});
+    store.set('a.b.c.e', {f: null});
+    store.has('a.b.c.d.x').should.be.true;
+    store.has('a.b.c.e.f').should.be.true;
+    store.has('a.b.c.e.bar').should.be.false;
+  });
+
   it('should `.get()` a stored value', function () {
     store = new Store('bbb');
     store.set('three', 'four');
