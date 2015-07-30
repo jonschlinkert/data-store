@@ -16,6 +16,7 @@ var has = require('has-value');
 var union = require('union-value');
 var visit = require('object-visit');
 var mapVisit = require('map-visit');
+var hasOwn = require('has-own-deep');
 
 /**
  * Lazily required modules
@@ -173,6 +174,7 @@ Store.prototype.get = function (key) {
  * store.set('c', null);
  * store.has('a'); //=> true
  * store.has('c'); //=> false
+ * store.has('d'); //=> false
  * ```
  *
  * @param  {String} `key`
@@ -182,6 +184,34 @@ Store.prototype.get = function (key) {
 
 Store.prototype.has = function(key) {
   return has(this.data, key);
+};
+
+/**
+ * Returns `true` if the specified `key` exists.
+ *
+ * ```js
+ * store.set('a', 'b');
+ * store.set('b', false);
+ * store.set('c', null);
+ * store.set('d', true);
+ *
+ * store.hasOwn('a'); //=> true
+ * store.hasOwn('b'); //=> true
+ * store.hasOwn('c'); //=> true
+ * store.hasOwn('d'); //=> true
+ * store.hasOwn('foo'); //=> false
+ * ```
+ *
+ * @param  {String} `key`
+ * @return {Boolean} Returns true if `key` exists
+ * @api public
+ */
+
+Store.prototype.hasOwn = function(key) {
+  if (key.indexOf('.') === -1) {
+    return this.data.hasOwnProperty(key);
+  }
+  return hasOwn(this.data, key);
 };
 
 /**
