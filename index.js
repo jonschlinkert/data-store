@@ -166,12 +166,13 @@ Store.prototype.get = function (key) {
 };
 
 /**
- * Returns `true` if the specified `key` has.
+ * Returns `true` if the specified `key` has truthy value.
  *
  * ```js
  * store.set('a', 'b');
- * store.has('a');
- * //=> true
+ * store.set('c', null);
+ * store.has('a'); //=> true
+ * store.has('c'); //=> false
  * ```
  *
  * @param  {String} `key`
@@ -180,9 +181,6 @@ Store.prototype.get = function (key) {
  */
 
 Store.prototype.has = function(key) {
-  if (key.indexOf('.') === -1) {
-    return this.data.hasOwnProperty(key);
-  }
   return has(this.data, key);
 };
 
