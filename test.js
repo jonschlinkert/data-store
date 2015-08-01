@@ -82,14 +82,62 @@ describe('store', function () {
 
   it('should return true if a key `.has()` on the store', function () {
     store = new Store('eee');
-    store.set('ggg', 'fff');
-    store.has('ggg').should.be.true;
+    store.set('foo', 'bar');
+    store.set('baz', null);
+    store.set('qux', undefined);
+
+    store.has('foo').should.eql(true);
+    store.has('bar').should.eql(false);
+    store.has('baz').should.eql(false);
+    store.has('qux').should.eql(false);
   });
 
   it('should return true if a nested key `.has()` on the store', function () {
     store = new Store('xxx');
     store.set('a.b.c.d', {x: 'zzz'});
-    store.has('a.b.c.d.x').should.be.true;
+    store.set('a.b.c.e', {f: null});
+    store.set('a.b.g.j', {k: undefined});
+
+    store.has('a.b.bar').should.eql(false);
+    store.has('a.b.c.d').should.eql(true);
+    store.has('a.b.c.d.x').should.eql(true);
+    store.has('a.b.c.d.z').should.eql(false);
+    store.has('a.b.c.e').should.eql(true);
+    store.has('a.b.c.e.f').should.eql(false);
+    store.has('a.b.c.e.z').should.eql(false);
+    store.has('a.b.g.j').should.eql(true);
+    store.has('a.b.g.j.k').should.eql(false);
+    store.has('a.b.g.j.z').should.eql(false);
+  });
+
+   it('should return true if a key exists `.hasOwn()` on the store', function () {
+    store = new Store('eee');
+    store.set('foo', 'bar');
+    store.set('baz', null);
+    store.set('qux', undefined);
+
+    store.hasOwn('foo').should.eql(true);
+    store.hasOwn('bar').should.eql(false);
+    store.hasOwn('baz').should.eql(true);
+    store.hasOwn('qux').should.eql(true);
+  });
+
+  it('should return true if a nested key exists `.hasOwn()` on the store', function () {
+    store = new Store('xxx');
+    store.set('a.b.c.d', {x: 'zzz'});
+    store.set('a.b.c.e', {f: null});
+    store.set('a.b.g.j', {k: undefined});
+
+    store.hasOwn('a.b.bar').should.eql(false);
+    store.hasOwn('a.b.c.d').should.eql(true);
+    store.hasOwn('a.b.c.d.x').should.eql(true);
+    store.hasOwn('a.b.c.d.z').should.eql(false);
+    store.has('a.b.c.e.f').should.eql(false);
+    store.hasOwn('a.b.c.e.f').should.eql(true);
+    store.hasOwn('a.b.c.e.bar').should.eql(false);
+    store.has('a.b.g.j.k').should.eql(false);
+    store.hasOwn('a.b.g.j.k').should.eql(true);
+    store.hasOwn('a.b.g.j.foo').should.eql(false);
   });
 
   it('should `.get()` a stored value', function () {
