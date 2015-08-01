@@ -10,22 +10,25 @@ var typeOf = require('kind-of');
 var omit = require('object.omit');
 var extend = require('extend-shallow');
 var Emitter = require('component-emitter');
-var get = require('get-value');
-var set = require('set-value');
-var has = require('has-value');
-var union = require('union-value');
-var visit = require('object-visit');
-var mapVisit = require('map-visit');
-var hasOwn = require('has-own-deep');
+var visit = require('collection-visit');
 
 /**
- * Lazily required modules
+ * Lazily required modules.
+ *
+ * These modules use lazy-caching, which means that they are only
+ * required/loaded if the method using the module is called. As a
+ * result, data-store loads much faster.
  */
 
 var lazy = require('lazy-cache')(require);
-var fs = lazy('graceful-fs');
-var del = lazy('rimraf');
-var mkdir = lazy('mkdirp');
+var lazyFs = lazy('graceful-fs');
+var lazyDel = lazy('rimraf');
+var lazyMkdir = lazy('mkdirp');
+var lazyGet = lazy('get-value');
+var lazySet = lazy('set-value');
+var lazyHas = lazy('has-value');
+var lazyUnion = lazy('union-value');
+var lazyHasOwn = lazy('has-own-deep');
 
 /**
  * Expose `Store`
@@ -101,18 +104,15 @@ Store.prototype.set = function(key, val) {
     throw new Error('Store#set cannot set functions as values: ' + val.toString());
   }
 
-  if (typeOf(key) === 'object') {
+  if (typeof key === 'object') {
     return this.visit('set', key);
-
-  } else if (Array.isArray(key)) {
-    return this.mapVisit('set', key);
 
   } else if (typeOf(val) === 'object') {
     var existing = this.get(key);
     val = extend({}, existing, val);
   }
 
-  set(this.data, key, val);
+  lazySet()(this.data, key, val);
   this.emit('set', key, val);
 
   this.save();
@@ -136,7 +136,7 @@ Store.prototype.set = function(key, val) {
  */
 
 Store.prototype.union = function (key, val) {
-  union(this.data, key, val);
+  lazyUnion()(this.data, key, val);
   this.emit('union', key, val);
   return this;
 };
@@ -160,7 +160,7 @@ Store.prototype.union = function (key, val) {
  */
 
 Store.prototype.get = function (key) {
-  return key ? get(this.data, key) : {
+  return key ? lazyGet()(this.data, key) : {
     name: this.name,
     data: this.data
   };
@@ -183,7 +183,7 @@ Store.prototype.get = function (key) {
  */
 
 Store.prototype.has = function(key) {
-  return has(this.data, key);
+  return lazyHas()(this.data, key);
 };
 
 /**
@@ -211,7 +211,7 @@ Store.prototype.hasOwn = function(key) {
   if (key.indexOf('.') === -1) {
     return this.data.hasOwnProperty(key);
   }
-  return hasOwn(this.data, key);
+  return lazyHasOwn()(this.data, key);
 };
 
 /**
@@ -260,10 +260,11 @@ Store.prototype.del = function(keys, options) {
   }
 
   options = options || {};
+  var del = lazyDel();
 
   // if no keys are passed, delete the entire store
-  del()(this.path, options, function (err) {
-    if (err) return console.log(err);
+  del(this.path, options, function (err) {
+    if (err) return console.error(err);
     this.data = {};
     this.emit('del', keys);
   }.bind(this));
@@ -279,18 +280,6 @@ Store.prototype.del = function(keys, options) {
 
 Store.prototype.visit = function(method, object) {
   visit(this, method, object);
-  return this;
-};
-
-/**
- * Map `visit` over an array of objects.
- *
- * @param  {String} `method`
- * @param  {Array} `array`
- */
-
-Store.prototype.mapVisit = function(method, array) {
-  mapVisit(this, method, array);
   return this;
 };
 
@@ -317,7 +306,8 @@ function home(fp) {
 
 function readFile(fp) {
   try {
-    var str = fs().readFileSync(path.resolve(fp), 'utf8');
+    var fs = lazyFs();
+    var str = fs.readFileSync(path.resolve(fp), 'utf8');
     return JSON.parse(str);
   } catch(err) {}
   return {};
@@ -333,11 +323,13 @@ function readFile(fp) {
 
 function writeJson(dest, str) {
   var dir = path.dirname(dest);
+  var fs = lazyFs();
   try {
-    if (!fs().existsSync(dir)) {
-      mkdir().sync(dir);
+    var mkdir = lazyMkdir();
+    if (!fs.existsSync(dir)) {
+      mkdir.sync(dir);
     }
-    fs().writeFileSync(dest, JSON.stringify(str, null, 2));
+    fs.writeFileSync(dest, JSON.stringify(str, null, 2));
   } catch (err) {
     err.origin = __filename;
     throw new Error('data-store: ' + err);
