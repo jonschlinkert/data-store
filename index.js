@@ -51,6 +51,7 @@ module.exports =  Store;
  * @param  {String} `name` Store name.
  * @param  {Object} `options`
  *   @option {String} [options] `cwd` Current working directory for storage. If not defined, the user home directory is used, based on OS. This is the only option currently, other may be added in the future.
+ *   @option {Number} [options] `indent` Number passed to `JSON.stringify` when saving the data. Defaults to `2` if `null` or `undefined`
  * @api public
  */
 
