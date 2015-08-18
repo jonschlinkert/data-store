@@ -139,6 +139,8 @@ Store.prototype.set = function(key, val) {
 Store.prototype.union = function (key, val) {
   lazyUnion()(this.data, key, val);
   this.emit('union', key, val);
+
+  this.save();
   return this;
 };
 
@@ -257,6 +259,7 @@ Store.prototype.del = function(keys, options) {
   keys = Array.isArray(keys) ? keys : [keys];
   if (keys.length) {
     this.data = omit(this.data, keys);
+    this.save();
     return this;
   }
 
