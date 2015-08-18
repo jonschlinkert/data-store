@@ -9,6 +9,7 @@
 
 /* deps: mocha */
 require('should');
+var fs = require('fs');
 var path = require('path');
 var assert = require('assert');
 var Store = require('./');
@@ -27,11 +28,19 @@ describe('store', function () {
   });
 
   it('should create a store at the given `cwd`', function () {
-    store = new Store('abc', 'actual');
+    store = new Store('abc', {cwd: 'actual'});
 
     store.set('foo', 'bar');
     path.basename(store.path).should.equal('abc.json');
     store.data.should.have.property('foo', 'bar');
+    assert.equal(fs.existsSync(path.join(__dirname, 'actual', 'abc.json')), true);
+  });
+
+  it('should create a store using the given `indent`', function () {
+    store = new Store('abc', {cwd: 'actual', indent: 0});
+    store.set('foo', 'bar');
+    var contents = fs.readFileSync(path.join(__dirname, 'actual', 'abc.json'), 'utf8');
+    assert.equal(contents, '{"foo":"bar"}');
   });
 
   it('should `.set()` a value on the store', function () {

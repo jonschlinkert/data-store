@@ -63,6 +63,7 @@ function Store(name, options) {
   options = options || {};
   var cwd = options.cwd || home('data-store');
 
+  this.indent = options.indent;
   this.name = name;
   this.path = path.join(cwd, name + '.json');
   this.data = readFile(this.path) || {};
@@ -225,7 +226,7 @@ Store.prototype.hasOwn = function(key) {
  */
 
 Store.prototype.save = function(dest) {
-  writeJson(dest || this.path, this.data);
+  writeJson(dest || this.path, this.data, this.indent);
 };
 
 /**
@@ -319,9 +320,13 @@ function readFile(fp) {
  *
  * @param {String} `dest`
  * @param {String} `str`
+ * @param {Number} `indent` Indent passed to JSON.stringify (default 2)
  */
 
-function writeJson(dest, str) {
+function writeJson(dest, str, indent) {
+  if (typeof indent === 'undefined' || indent === null) {
+    indent = 2;
+  }
   var dir = path.dirname(dest);
   var fs = lazyFs();
   try {
@@ -329,7 +334,7 @@ function writeJson(dest, str) {
     if (!fs.existsSync(dir)) {
       mkdir.sync(dir);
     }
-    fs.writeFileSync(dest, JSON.stringify(str, null, 2));
+    fs.writeFileSync(dest, JSON.stringify(str, null, indent));
   } catch (err) {
     err.origin = __filename;
     throw new Error('data-store: ' + err);
