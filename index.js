@@ -6,11 +6,8 @@
 
 var path = require('path');
 var util = require('util');
-var typeOf = require('kind-of');
-var omit = require('object.omit');
-var extend = require('extend-shallow');
 var Emitter = require('component-emitter');
-var visit = require('collection-visit');
+var lazy = require('lazy-cache')(require);
 
 /**
  * Lazily required modules.
@@ -20,15 +17,18 @@ var visit = require('collection-visit');
  * result, data-store loads much faster.
  */
 
-var lazy = require('lazy-cache')(require);
-var lazyFs = lazy('graceful-fs');
-var lazyDel = lazy('rimraf');
-var lazyMkdir = lazy('mkdirp');
-var lazyGet = lazy('get-value');
-var lazySet = lazy('set-value');
-var lazyHas = lazy('has-value');
-var lazyUnion = lazy('union-value');
-var lazyHasOwn = lazy('has-own-deep');
+lazy('collection-visit', 'visit');
+lazy('extend-shallow', 'extend');
+lazy('get-value', 'get');
+lazy('graceful-fs', 'fs');
+lazy('has-own-deep', 'hasOwn');
+lazy('has-value', 'has');
+lazy('kind-of', 'typeOf');
+lazy('mkdirp', 'mkdirp');
+lazy('object.omit', 'omit');
+lazy('rimraf', 'del');
+lazy('set-value', 'set');
+lazy('union-value', 'union');
 
 /**
  * Expose `Store`
@@ -109,12 +109,12 @@ Store.prototype.set = function(key, val) {
   if (typeof key === 'object') {
     return this.visit('set', key);
 
-  } else if (typeOf(val) === 'object') {
+  } else if (lazy.typeOf(val) === 'object') {
     var existing = this.get(key);
-    val = extend({}, existing, val);
+    val = lazy.extend({}, existing, val);
   }
 
-  lazySet()(this.data, key, val);
+  lazy.set(this.data, key, val);
   this.emit('set', key, val);
 
   this.save();
@@ -138,7 +138,7 @@ Store.prototype.set = function(key, val) {
  */
 
 Store.prototype.union = function (key, val) {
-  lazyUnion()(this.data, key, val);
+  lazy.union(this.data, key, val);
   this.emit('union', key, val);
 
   this.save();
@@ -164,7 +164,7 @@ Store.prototype.union = function (key, val) {
  */
 
 Store.prototype.get = function (key) {
-  return key ? lazyGet()(this.data, key) : {
+  return key ? lazy.get(this.data, key) : {
     name: this.name,
     data: this.data
   };
@@ -187,7 +187,7 @@ Store.prototype.get = function (key) {
  */
 
 Store.prototype.has = function(key) {
-  return lazyHas()(this.data, key);
+  return lazy.has(this.data, key);
 };
 
 /**
@@ -215,7 +215,7 @@ Store.prototype.hasOwn = function(key) {
   if (key.indexOf('.') === -1) {
     return this.data.hasOwnProperty(key);
   }
-  return lazyHasOwn()(this.data, key);
+  return lazy.hasOwn(this.data, key);
 };
 
 /**
@@ -259,16 +259,15 @@ Store.prototype.del = function(keys, options) {
   // if keys are passed, only omit those properties
   keys = Array.isArray(keys) ? keys : [keys];
   if (keys.length) {
-    this.data = omit(this.data, keys);
+    this.data = lazy.omit(this.data, keys);
     this.save();
     return this;
   }
 
   options = options || {};
-  var del = lazyDel();
 
   // if no keys are passed, delete the entire store
-  del(this.path, options, function (err) {
+  lazy.del(this.path, options, function (err) {
     if (err) return console.error(err);
     this.data = {};
     this.emit('del', keys);
@@ -284,7 +283,7 @@ Store.prototype.del = function(keys, options) {
  */
 
 Store.prototype.visit = function(method, object) {
-  visit(this, method, object);
+  lazy.visit(this, method, object);
   return this;
 };
 
@@ -311,8 +310,7 @@ function home(fp) {
 
 function readFile(fp) {
   try {
-    var fs = lazyFs();
-    var str = fs.readFileSync(path.resolve(fp), 'utf8');
+    var str = lazy.fs.readFileSync(path.resolve(fp), 'utf8');
     return JSON.parse(str);
   } catch(err) {}
   return {};
@@ -332,13 +330,11 @@ function writeJson(dest, str, indent) {
     indent = 2;
   }
   var dir = path.dirname(dest);
-  var fs = lazyFs();
   try {
-    var mkdir = lazyMkdir();
-    if (!fs.existsSync(dir)) {
-      mkdir.sync(dir);
+    if (!lazy.fs.existsSync(dir)) {
+      lazy.mkdirp.sync(dir);
     }
-    fs.writeFileSync(dest, JSON.stringify(str, null, indent));
+    lazy.fs.writeFileSync(dest, JSON.stringify(str, null, indent));
   } catch (err) {
     err.origin = __filename;
     throw new Error('data-store: ' + err);
