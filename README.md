@@ -13,28 +13,27 @@ $ npm i data-store --save
 ## Usage example
 
 ```js
-var Store = require('data-store');
 // default cwd is `~/data-store/`
-var store = new Store('app', {cwd: 'actual'});
+var store = require('data-store')('app', {cwd: 'actual'});
 
 store
   .set('a', 'b')
-  .set('c.d', {e: 'f'})
-  .set('c.d', {g: 'h'});
+  .set({c: 'd'})
+  .set('e.f', 'g')
 
-console.log(store.get('c.d'));
-//=> { e: 'f', g: 'h' }
+console.log(store.get('e.f'));
+//=> 'g'
 
 console.log(store.get());
-//=> { name: 'app', data: { a: 'b', c: { d: { e: 'f', g: 'h' } } } }
+//=> {name: 'app', data: {a: 'b', c: 'd', e: {f: 'g' }}}
 
 console.log(store.data);
-//=> { a: 'b', c: { d: { e: 'f', g: 'h' } } }
+//=> {a: 'b', c: 'd', e: {f: 'g'}}
 ```
 
 ## API
 
-### [Store](index.js#L58)
+### [Store](index.js#L39)
 
 Initialize a new `Store` with the given `name` and `options`.
 
@@ -49,14 +48,16 @@ Initialize a new `Store` with the given `name` and `options`.
 **Example**
 
 ```js
-var store = new Store('abc');
+var store = require('data-store')('abc');
 //=> '~/data-store/a.json'
 
-var store = new Store('abc', {cwd: 'test/fixtures'});
+var store = require('data-store')('abc', {
+  cwd: 'test/fixtures'
+});
 //=> './test/fixtures/abc.json'
 ```
 
-### [.set](index.js#L104)
+### [.set](index.js#L87)
 
 Assign `value` to `key` and save to disk. Can be a key-value pair or an object.
 
@@ -88,7 +89,7 @@ store.set('a', {d: 'e'});
 //=> {d: 'e'}
 ```
 
-### [.union](index.js#L140)
+### [.union](index.js#L123)
 
 Add or append an array of unique values to the given `key`.
 
@@ -107,7 +108,7 @@ store.get('a');
 //=> ['a', 'b', 'c']
 ```
 
-### [.get](index.js#L166)
+### [.get](index.js#L148)
 
 Get the stored `value` of `key`, or return the entire store if no `key` is defined.
 
@@ -127,7 +128,7 @@ store.get();
 //=> {b: 'c'}
 ```
 
-### [.has](index.js#L189)
+### [.has](index.js#L171)
 
 Returns `true` if the specified `key` has truthy value.
 
@@ -146,7 +147,7 @@ store.has('c'); //=> false
 store.has('d'); //=> false
 ```
 
-### [.hasOwn](index.js#L214)
+### [.hasOwn](index.js#L196)
 
 Returns `true` if the specified `key` exists.
 
@@ -170,7 +171,7 @@ store.hasOwn('d'); //=> true
 store.hasOwn('foo'); //=> false
 ```
 
-### [.save](index.js#L231)
+### [.save](index.js#L213)
 
 Persist the store to disk.
 
@@ -184,7 +185,7 @@ Persist the store to disk.
 store.save();
 ```
 
-### [.del](index.js#L253)
+### [.del](index.js#L235)
 
 Delete `keys` from the store, or delete the entire store if no keys are passed.
 
@@ -204,18 +205,42 @@ store.del();
 store.del({force: true});
 ```
 
+### [.extend](index.js#L294)
+
+Static method for inheriting prototype and static methods from `Store`.
+
+**Params**
+
+* `Ctor` **{Function}**: The constructor to extend.
+
+**Example**
+
+```js
+function MyApp(options) {
+  Store.call(this, options);
+}
+Store.extend(MyApp);
+
+// Optionally pass another object to extend onto `MyApp`
+function MyApp(options) {
+  Store.call(this, options);
+  Foo.call(this, options);
+}
+Store.extend(MyApp, Foo.prototype);
+```
+
 ## Related
 
-* [assign-value](https://github.com/jonschlinkert/assign-value): Extend a value or deeply nested property of an object using object path notation.
-* [get-value](https://github.com/jonschlinkert/get-value): Use property paths (`  a.b.c`) to get a nested value from an object.
-* [has-own-deep](https://github.com/jonschlinkert/has-own-deep): Returns true if an object has an own, nested property using dot notation paths ('a.b.c').
-* [has-value](https://github.com/jonschlinkert/has-value): Returns true if a value exists, false if empty. Works with deeply nested values using… [more](https://github.com/jonschlinkert/has-value)
-* [set-value](https://github.com/jonschlinkert/set-value): Create nested values and any intermediaries using dot notation (`'a.b.c'`) paths.
-* [union-value](https://github.com/jonschlinkert/union-value): Set an array of unique values as the property of an object. Supports setting deeply… [more](https://github.com/jonschlinkert/union-value)
+* [assign-value](https://www.npmjs.com/package/assign-value): Extend a value or deeply nested property of an object using object path notation. | [homepage](https://github.com/jonschlinkert/assign-value)
+* [get-value](https://www.npmjs.com/package/get-value): Use property paths (`  a.b.c`) to get a nested value from an object. | [homepage](https://github.com/jonschlinkert/get-value)
+* [has-own-deep](https://www.npmjs.com/package/has-own-deep): Returns true if an object has an own, nested property using dot notation paths ('a.b.c'). | [homepage](https://github.com/jonschlinkert/has-own-deep)
+* [has-value](https://www.npmjs.com/package/has-value): Returns true if a value exists, false if empty. Works with deeply nested values using… [more](https://www.npmjs.com/package/has-value) | [homepage](https://github.com/jonschlinkert/has-value)
+* [set-value](https://www.npmjs.com/package/set-value): Create nested values and any intermediaries using dot notation (`'a.b.c'`) paths. | [homepage](https://github.com/jonschlinkert/set-value)
+* [union-value](https://www.npmjs.com/package/union-value): Set an array of unique values as the property of an object. Supports setting deeply… [more](https://www.npmjs.com/package/union-value) | [homepage](https://github.com/jonschlinkert/union-value)
 
 ## Contributing
 
-Pull requests and stars are always welcome. For bugs and feature requests, [please create an issue](https://github.com/jonschlinkert/data-store/issues/new)
+Pull requests and stars are always welcome. For bugs and feature requests, [please create an issue](https://github.com/jonschlinkert/data-store/issues/new).
 
 ## Running tests
 
@@ -239,4 +264,4 @@ Released under the MIT license.
 
 ***
 
-_This file was generated by [verb-cli](https://github.com/assemble/verb-cli) on August 19, 2015._
+_This file was generated by [verb-cli](https://github.com/assemble/verb-cli) on August 30, 2015._
