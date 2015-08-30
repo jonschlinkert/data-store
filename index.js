@@ -7,28 +7,7 @@
 var path = require('path');
 var util = require('util');
 var Emitter = require('component-emitter');
-var lazy = require('lazy-cache')(require);
-
-/**
- * Lazily required modules.
- *
- * These modules use lazy-caching, which means that they are only
- * required/loaded if the method using the module is called. As a
- * result, data-store loads much faster.
- */
-
-lazy('collection-visit', 'visit');
-lazy('extend-shallow', 'extend');
-lazy('get-value', 'get');
-lazy('graceful-fs', 'fs');
-lazy('has-own-deep', 'hasOwn');
-lazy('has-value', 'has');
-lazy('kind-of', 'typeOf');
-lazy('mkdirp', 'mkdirp');
-lazy('object.omit', 'omit');
-lazy('rimraf', 'del');
-lazy('set-value', 'set');
-lazy('union-value', 'union');
+var utils = require('./utils');
 
 /**
  * Expose `Store`
@@ -41,10 +20,12 @@ module.exports =  Store;
  * and `options`.
  *
  * ```js
- * var store = new Store('abc');
+ * var store = require('data-store')('abc');
  * //=> '~/data-store/a.json'
  *
- * var store = new Store('abc', {cwd: 'test/fixtures'});
+ * var store = require('data-store')('abc', {
+ *   cwd: 'test/fixtures'
+ * });
  * //=> './test/fixtures/abc.json'
  * ```
  *
@@ -59,12 +40,14 @@ function Store(name, options) {
   if (typeof name !== 'string') {
     throw new Error('data-store expects a string as the first argument.');
   }
+  if (!(this instanceof Store)) {
+    return new Store(name, options);
+  }
 
   Emitter.call(this);
-  options = options || {};
-  var cwd = options.cwd || home('data-store');
+  this.options = options || {};
+  var cwd = this.options.cwd || home('data-store');
 
-  this.indent = options.indent;
   this.name = name;
   this.path = path.join(cwd, name + '.json');
   this.data = readFile(this.path) || {};
@@ -109,12 +92,12 @@ Store.prototype.set = function(key, val) {
   if (typeof key === 'object') {
     return this.visit('set', key);
 
-  } else if (lazy.typeOf(val) === 'object') {
+  } else if (utils.typeOf(val) === 'object') {
     var existing = this.get(key);
-    val = lazy.extend({}, existing, val);
+    val = utils.extend({}, existing, val);
   }
 
-  lazy.set(this.data, key, val);
+  utils.set(this.data, key, val);
   this.emit('set', key, val);
 
   this.save();
@@ -138,9 +121,8 @@ Store.prototype.set = function(key, val) {
  */
 
 Store.prototype.union = function (key, val) {
-  lazy.union(this.data, key, val);
+  utils.union(this.data, key, val);
   this.emit('union', key, val);
-
   this.save();
   return this;
 };
@@ -164,7 +146,7 @@ Store.prototype.union = function (key, val) {
  */
 
 Store.prototype.get = function (key) {
-  return key ? lazy.get(this.data, key) : {
+  return key ? utils.get(this.data, key) : {
     name: this.name,
     data: this.data
   };
@@ -187,7 +169,7 @@ Store.prototype.get = function (key) {
  */
 
 Store.prototype.has = function(key) {
-  return lazy.has(this.data, key);
+  return utils.has(this.data, key);
 };
 
 /**
@@ -215,7 +197,7 @@ Store.prototype.hasOwn = function(key) {
   if (key.indexOf('.') === -1) {
     return this.data.hasOwnProperty(key);
   }
-  return lazy.hasOwn(this.data, key);
+  return utils.hasOwn(this.data, key);
 };
 
 /**
@@ -229,7 +211,7 @@ Store.prototype.hasOwn = function(key) {
  */
 
 Store.prototype.save = function(dest) {
-  writeJson(dest || this.path, this.data, this.indent);
+  writeJson(dest || this.path, this.data, this.options.indent);
 };
 
 /**
@@ -259,7 +241,7 @@ Store.prototype.del = function(keys, options) {
   // if keys are passed, only omit those properties
   keys = Array.isArray(keys) ? keys : [keys];
   if (keys.length) {
-    this.data = lazy.omit(this.data, keys);
+    this.data = utils.omit(this.data, keys);
     this.save();
     return this;
   }
@@ -267,7 +249,7 @@ Store.prototype.del = function(keys, options) {
   options = options || {};
 
   // if no keys are passed, delete the entire store
-  lazy.del(this.path, options, function (err) {
+  utils.del(this.path, options, function (err) {
     if (err) return console.error(err);
     this.data = {};
     this.emit('del', keys);
@@ -283,7 +265,7 @@ Store.prototype.del = function(keys, options) {
  */
 
 Store.prototype.visit = function(method, object) {
-  lazy.visit(this, method, object);
+  utils.visit(this, method, object);
   return this;
 };
 
@@ -310,7 +292,7 @@ function home(fp) {
 
 function readFile(fp) {
   try {
-    var str = lazy.fs.readFileSync(path.resolve(fp), 'utf8');
+    var str = utils.fs.readFileSync(path.resolve(fp), 'utf8');
     return JSON.parse(str);
   } catch(err) {}
   return {};
@@ -331,10 +313,10 @@ function writeJson(dest, str, indent) {
   }
   var dir = path.dirname(dest);
   try {
-    if (!lazy.fs.existsSync(dir)) {
-      lazy.mkdirp.sync(dir);
+    if (!utils.fs.existsSync(dir)) {
+      utils.mkdirp.sync(dir);
     }
-    lazy.fs.writeFileSync(dest, JSON.stringify(str, null, indent));
+    utils.fs.writeFileSync(dest, JSON.stringify(str, null, indent));
   } catch (err) {
     err.origin = __filename;
     throw new Error('data-store: ' + err);
