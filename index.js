@@ -270,6 +270,43 @@ Store.prototype.visit = function(method, object) {
 };
 
 /**
+ * Static method for inheriting prototype and
+ * static methods from `Store`.
+ *
+ * ```js
+ * function MyApp(options) {
+ *   Store.call(this, options);
+ * }
+ * Store.extend(MyApp);
+ *
+ * // Optionally pass another object to extend onto `MyApp`
+ * function MyApp(options) {
+ *   Store.call(this, options);
+ *   Foo.call(this, options);
+ * }
+ * Store.extend(MyApp, Foo.prototype);
+ * ```
+ *
+ * @param {Function} `Ctor` The constructor to extend.
+ * @api public
+ */
+
+Store.extend = function (Ctor, proto) {
+  util.inherits(Ctor, Store);
+  for (var key in Store) {
+    Ctor[key] = Store[key];
+  }
+
+  if (typeof proto === 'object') {
+    var obj = Object.create(proto);
+
+    for (var k in obj) {
+      Ctor.prototype[k] = obj[k];
+    }
+  }
+};
+
+/**
  * Get the user's home directory
  *
  * @param {String} `fp`
