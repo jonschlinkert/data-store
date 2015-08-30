@@ -20,11 +20,21 @@ describe('store', function () {
     store.del({force: true});
   });
 
+  it('should create an instance of Store', function () {
+    store = new Store('abc');
+    assert(store instanceof Store);
+  });
+
   it('should create a store with the given `name`', function () {
     store = new Store('abc');
-
     store.set('foo', 'bar');
     store.data.should.have.property('foo', 'bar');
+  });
+
+  it('should return an instance without `new`:', function () {
+    store = Store('abc');
+    store.set('foo', 'zzz');
+    store.data.should.have.property('foo', 'zzz');
   });
 
   it('should create a store at the given `cwd`', function () {
@@ -36,7 +46,7 @@ describe('store', function () {
     assert.equal(fs.existsSync(path.join(__dirname, 'actual', 'abc.json')), true);
   });
 
-  it('should create a store using the given `indent`', function () {
+  it('should create a store using the given `indent` value', function () {
     store = new Store('abc', {cwd: 'actual', indent: 0});
     store.set('foo', 'bar');
     var contents = fs.readFileSync(path.join(__dirname, 'actual', 'abc.json'), 'utf8');
