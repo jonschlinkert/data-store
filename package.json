@@ -1,7 +1,7 @@
 {
   "name": "data-store",
   "description": "Easily get, set and persist config data.",
-  "version": "0.8.2",
+  "version": "0.9.0",
   "homepage": "https://github.com/jonschlinkert/data-store",
   "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
   "repository": "jonschlinkert/data-store",
@@ -10,7 +10,8 @@
   },
   "license": "MIT",
   "files": [
-    "index.js"
+    "index.js",
+    "utils.js"
   ],
   "main": "index.js",
   "engines": {
@@ -20,18 +21,18 @@
     "test": "mocha"
   },
   "dependencies": {
-    "collection-visit": "^0.1.1",
+    "collection-visit": "^0.2.0",
     "component-emitter": "^1.2.0",
     "extend-shallow": "^2.0.1",
     "get-value": "^1.1.5",
     "graceful-fs": "^4.1.2",
     "has-own-deep": "^0.1.4",
     "has-value": "^0.2.0",
-    "kind-of": "^2.0.0",
-    "lazy-cache": "^0.2.2",
+    "kind-of": "^2.0.1",
+    "lazy-cache": "^0.2.3",
     "mkdirp": "^0.5.1",
     "object.omit": "^2.0.0",
-    "rimraf": "^2.4.2",
+    "rimraf": "^2.4.3",
     "set-value": "^0.2.0",
     "union-value": "^0.1.1"
   },
