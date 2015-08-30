@@ -1,17 +1,16 @@
-var Store = require('./');
 // default cwd is `~/data-store/`
-var store = new Store('app', {cwd: 'actual'});
+var store = require('./')('app', {cwd: 'actual'});
 
 store
   .set('a', 'b')
-  .set('c.d', {e: 'f'})
-  .set('c.d', {g: 'h'});
+  .set({c: 'd'})
+  .set('e.f', 'g')
 
-console.log(store.get('c.d'));
-//=> { e: 'f', g: 'h' }
+console.log(store.get('e.f'));
+//=> 'g'
 
 console.log(store.get());
-//=> { name: 'app', data: { a: 'b', c: { d: { e: 'f', g: 'h' } } } }
+//=> {name: 'app', data: {a: 'b', c: 'd', e: {f: 'g' }}}
 
 console.log(store.data);
-//=> { a: 'b', c: { d: { e: 'f', g: 'h' } } }
+//=> {a: 'b', c: 'd', e: {f: 'g'}}
