@@ -4,25 +4,34 @@
  * Expose the `lazy` object
  */
 
-var lazy = module.exports = require('lazy-cache')(require);
+var utils = require('lazy-cache')(require);
+var fn = require;
 
 /**
  * Lazily required modules.
  *
  * These modules use lazy-caching, which means that they are only
- * required/loaded if the method using the module is called. As a
- * result, data-store loads much faster.
+ * required/loaded if the method using the module is called, so
+ * data-store loads faster as a result.
  */
 
-lazy('collection-visit', 'visit');
-lazy('extend-shallow', 'extend');
-lazy('get-value', 'get');
-lazy('graceful-fs', 'fs');
-lazy('has-own-deep', 'hasOwn');
-lazy('has-value', 'has');
-lazy('kind-of', 'typeOf');
-lazy('mkdirp', 'mkdirp');
-lazy('object.omit', 'omit');
-lazy('rimraf', 'del');
-lazy('set-value', 'set');
-lazy('union-value', 'union');
+require = utils;
+require('collection-visit', 'visit');
+require('extend-shallow', 'extend');
+require('get-value', 'get');
+require('graceful-fs', 'fs');
+require('has-own-deep', 'hasOwn');
+require('has-value', 'has');
+require('kind-of', 'typeOf');
+require('mkdirp', 'mkdirp');
+require('object.omit', 'omit');
+require('rimraf', 'del');
+require('set-value', 'set');
+require('union-value', 'union');
+require = fn;
+
+/**
+ * Expose `utils`
+ */
+
+module.exports = utils;
