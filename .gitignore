@@ -11,3 +11,4 @@ TODO.md
 vendor
 test.js
 *.DS_Store
+coverage
