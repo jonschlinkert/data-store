@@ -16,19 +16,26 @@ var fn = require;
  */
 
 require = utils;
-require('collection-visit', 'visit');
-require('extend-shallow', 'extend');
-require('get-value', 'get');
 require('graceful-fs', 'fs');
-require('has-own-deep', 'hasOwn');
-require('has-value', 'has');
 require('kind-of', 'typeOf');
 require('mkdirp', 'mkdirp');
-require('object.omit', 'omit');
-require('rimraf', 'del');
-require('set-value', 'set');
+require('has-own-deep', 'hasOwn');
+require('has-value', 'has');
 require('union-value', 'union');
+require('rimraf', 'del');
 require = fn;
+
+utils.noop = function () {
+  return;
+};
+
+utils.last = function (arr) {
+  return arr[arr.length - 1];
+};
+
+utils.arrayify = function (val) {
+  return Array.isArray(val) ? val : [val];
+};
 
 /**
  * Expose `utils`

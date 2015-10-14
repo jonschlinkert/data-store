@@ -6,7 +6,9 @@
 
 var path = require('path');
 var util = require('util');
-var Emitter = require('component-emitter');
+var base = require('base-methods');
+var Base = base.namespace('data');
+var proto = Base.prototype;
 var utils = require('./utils');
 
 /**
@@ -38,22 +40,26 @@ module.exports =  Store;
 
 function Store(name, options) {
   if (typeof name !== 'string') {
-    throw new Error('data-store expects a string as the first argument.');
+    throw new TypeError('expected a string as the first argument');
   }
   if (!(this instanceof Store)) {
     return new Store(name, options);
   }
 
-  Emitter.call(this);
+  Base.call(this);
   this.options = options || {};
   var cwd = this.options.cwd || home('data-store');
 
   this.name = name;
   this.path = path.join(cwd, name + '.json');
-  this.data = readFile(this.path) || {};
+  this.data = readFile(this.path);
 }
 
-util.inherits(Store, Emitter);
+/**
+ * Inherit `Base`
+ */
+
+Base.extend(Store);
 
 /**
  * Assign `value` to `key` and save to disk. Can be
@@ -85,21 +91,7 @@ util.inherits(Store, Emitter);
  */
 
 Store.prototype.set = function(key, val) {
-  if (typeof val === 'function') {
-    throw new Error('Store#set cannot set functions as values: ' + val.toString());
-  }
-
-  if (typeof key === 'object') {
-    return this.visit('set', key);
-
-  } else if (utils.typeOf(val) === 'object') {
-    var existing = this.get(key);
-    val = utils.extend({}, existing, val);
-  }
-
-  utils.set(this.data, key, val);
-  this.emit('set', key, val);
-
+  proto.set.apply(this, arguments);
   this.save();
   return this;
 };
@@ -146,7 +138,7 @@ Store.prototype.union = function (key, val) {
  */
 
 Store.prototype.get = function (key) {
-  return key ? utils.get(this.data, key) : {
+  return key ? proto.get.call(this, key) : {
     name: this.name,
     data: this.data
   };
@@ -232,78 +224,35 @@ Store.prototype.save = function(dest) {
  * @api public
  */
 
-Store.prototype.del = function(keys, options) {
-  if (typeof keys !== 'string' && !Array.isArray(keys)) {
-    options = keys;
-    keys = [];
-  }
+Store.prototype.del = function(keys, options, cb) {
+  var args = [].slice.call(arguments);
+  var last = utils.last(args);
 
-  // if keys are passed, only omit those properties
-  keys = Array.isArray(keys) ? keys : [keys];
-  if (keys.length) {
-    this.data = utils.omit(this.data, keys);
+  cb = typeof last === 'function' ? args.pop() : utils.noop;
+
+  last = utils.last(args);
+  options = utils.typeOf(last) === 'object' ? args.pop() : {};
+
+  if (args.length) {
+    utils.arrayify(keys).forEach(function (key) {
+      proto.del.call(this, key);
+    }.bind(this));
     this.save();
     return this;
   }
 
-  options = options || {};
+  keys = Object.keys(this.data);
+  if (options.force !== true) {
+    throw new Error('options.force is required to delete the entire cache.');
+  }
 
   // if no keys are passed, delete the entire store
   utils.del(this.path, options, function (err) {
-    if (err) return console.error(err);
+    if (err) return cb(err);
     this.data = {};
     this.emit('del', keys);
+    cb(null, keys);
   }.bind(this));
-};
-
-/**
- * Call the given `method` on each property in the given
- * object.
- *
- * @param  {String} `method`
- * @param  {Object} `object`
- */
-
-Store.prototype.visit = function(method, object) {
-  utils.visit(this, method, object);
-  return this;
-};
-
-/**
- * Static method for inheriting prototype and
- * static methods from `Store`.
- *
- * ```js
- * function MyApp(options) {
- *   Store.call(this, options);
- * }
- * Store.extend(MyApp);
- *
- * // Optionally pass another object to extend onto `MyApp`
- * function MyApp(options) {
- *   Store.call(this, options);
- *   Foo.call(this, options);
- * }
- * Store.extend(MyApp, Foo.prototype);
- * ```
- *
- * @param {Function} `Ctor` The constructor to extend.
- * @api public
- */
-
-Store.extend = function (Ctor, proto) {
-  util.inherits(Ctor, Store);
-  for (var key in Store) {
-    Ctor[key] = Store[key];
-  }
-
-  if (typeof proto === 'object') {
-    var obj = Object.create(proto);
-
-    for (var k in obj) {
-      Ctor.prototype[k] = obj[k];
-    }
-  }
 };
 
 /**
@@ -356,6 +305,7 @@ function writeJson(dest, str, indent) {
     utils.fs.writeFileSync(dest, JSON.stringify(str, null, indent));
   } catch (err) {
     err.origin = __filename;
-    throw new Error('data-store: ' + err);
+    err.reason = 'data-store cannot write to: ' + dest;
+    throw new Error(err);
   }
 }
