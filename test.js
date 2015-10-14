@@ -25,6 +25,18 @@ describe('store', function () {
     assert(store instanceof Store);
   });
 
+  it('should throw an error if first arg is invalid', function (done) {
+    try {
+      new Store();
+      done(new Error('expected an error'));
+    } catch(err) {
+      assert(err);
+      assert(err.message);
+      assert(err.message === 'expected a string as the first argument');
+      done();
+    }
+  });
+
   it('should create a store with the given `name`', function () {
     store = new Store('abc');
     store.set('foo', 'bar');
@@ -175,8 +187,13 @@ describe('store', function () {
     store = new Store('ccc');
     store.set('a', 'b');
     store.set('c', 'd');
+    store.data.should.have.property('a');
+    store.data.should.have.property('c');
+
     store.del('a');
-    store.should.not.have.property('a');
+    store.del('c');
+    store.data.should.not.have.property('a');
+    store.data.should.not.have.property('c');
   });
 
   it('should `.del()` multiple stored values', function () {
@@ -238,13 +255,13 @@ describe('events', function () {
     keys.should.eql(['a', 'c']);
   });
 
-  it('should emit `del` when a value is delted:', function () {
+  it('should emit `del` when a value is delted:', function (done) {
     store = new Store('bbb');
-    var res;
 
     store.on('del', function (keys) {
-      keys.should.eql(['a']);
+      keys.should.eql('a');
       assert(typeof store.get('a') === 'undefined');
+      done();
     });
 
     store.set('a', {b: 'c'});
@@ -252,13 +269,13 @@ describe('events', function () {
     store.del('a');
   });
 
-  it('should emit deleted keys on `del`:', function () {
+  it('should emit deleted keys on `del`:', function (done) {
     store = new Store('bbb');
-    var res;
 
     store.on('del', function (keys) {
-      keys.should.eql(['a', 'c', 'e']);
+      keys.should.eql(['c', 'a', 'e']);
       assert(Object.keys(store.data).length === 0);
+      done();
     });
 
     store.set('a', 'b');
@@ -266,5 +283,29 @@ describe('events', function () {
     store.set('e', 'f');
     store.data.should.have.properties(['a', 'c', 'e']);
     store.del({force: true});
+  });
+
+  it('should expose `err` to a callback:', function () {
+    store = new Store('lll');
+    store.set('a', 'b');
+    store.set('c', 'd');
+    store.set('e', 'f');
+
+    (function () {
+      store.del();
+    }).should.throw('options.force is required to delete the entire cache.');
+  });
+
+  it('should expose `err` to a callback:', function (done) {
+    store = new Store('lll');
+    store.set('a', 'b');
+    store.set('c', 'd');
+    store.set('e', 'f');
+
+    store.del({force: true}, function (err, keys) {
+      keys.should.eql(['a', 'c', 'e']);
+      assert(Object.keys(store.data).length === 0);
+      done();
+    });
   });
 });
