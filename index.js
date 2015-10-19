@@ -48,7 +48,7 @@ function Store(name, options) {
 
   Base.call(this);
   this.options = options || {};
-  var cwd = this.options.cwd || home('data-store');
+  var cwd = utils.resolve(this.options.cwd || '~/data-store');
 
   this.name = name;
   this.path = path.join(cwd, name + '.json');
@@ -204,6 +204,7 @@ Store.prototype.hasOwn = function(key) {
 
 Store.prototype.save = function(dest) {
   writeJson(dest || this.path, this.data, this.options.indent);
+  return this;
 };
 
 /**
@@ -253,21 +254,8 @@ Store.prototype.del = function(keys, options, cb) {
     this.emit('del', keys);
     cb(null, keys);
   }.bind(this));
+  return this;
 };
-
-/**
- * Get the user's home directory
- *
- * @param {String} `fp`
- * @return {String}
- */
-
-function home(fp) {
-  var res = (process.platform === 'win32')
-    ? process.env.USERPROFILE
-    : process.env.HOME;
-  return path.join(res, fp);
-}
 
 /**
  * Read JSON files.

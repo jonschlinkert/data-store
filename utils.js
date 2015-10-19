@@ -19,9 +19,10 @@ require = utils;
 require('graceful-fs', 'fs');
 require('kind-of', 'typeOf');
 require('mkdirp', 'mkdirp');
+require('resolve-dir', 'resolve');
 require('has-own-deep', 'hasOwn');
-require('has-value', 'has');
 require('union-value', 'union');
+require('has-value', 'has');
 require('rimraf', 'del');
 require = fn;
 
