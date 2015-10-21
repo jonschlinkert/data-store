@@ -285,7 +285,7 @@ describe('events', function () {
     store.del({force: true});
   });
 
-  it('should expose `err` to a callback:', function () {
+  it('should throw an error if force is not passed', function () {
     store = new Store('lll');
     store.set('a', 'b');
     store.set('c', 'd');
@@ -294,18 +294,5 @@ describe('events', function () {
     (function () {
       store.del();
     }).should.throw('options.force is required to delete the entire cache.');
-  });
-
-  it('should expose `err` to a callback:', function (done) {
-    store = new Store('lll');
-    store.set('a', 'b');
-    store.set('c', 'd');
-    store.set('e', 'f');
-
-    store.del({force: true}, function (err, keys) {
-      keys.should.eql(['a', 'c', 'e']);
-      assert(Object.keys(store.data).length === 0);
-      done();
-    });
   });
 });

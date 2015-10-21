@@ -5,7 +5,6 @@
  */
 
 var path = require('path');
-var util = require('util');
 var base = require('base-methods');
 var Base = base.namespace('data');
 var proto = Base.prototype;
@@ -225,17 +224,19 @@ Store.prototype.save = function(dest) {
  * @api public
  */
 
-Store.prototype.del = function(keys, options, cb) {
-  var args = [].slice.call(arguments);
-  var last = utils.last(args);
+Store.prototype.del = function(keys, options) {
+  var isArray = Array.isArray(keys);
+  if (typeof keys === 'string' || isArray) {
+    keys = utils.arrayify(keys);
+  } else {
+    options = keys;
+    keys = null;
+  }
 
-  cb = typeof last === 'function' ? args.pop() : utils.noop;
+  options = options || {};
 
-  last = utils.last(args);
-  options = utils.typeOf(last) === 'object' ? args.pop() : {};
-
-  if (args.length) {
-    utils.arrayify(keys).forEach(function (key) {
+  if (keys) {
+    keys.forEach(function (key) {
       proto.del.call(this, key);
     }.bind(this));
     this.save();
@@ -248,12 +249,9 @@ Store.prototype.del = function(keys, options, cb) {
   }
 
   // if no keys are passed, delete the entire store
-  utils.del(this.path, options, function (err) {
-    if (err) return cb(err);
-    this.data = {};
-    this.emit('del', keys);
-    cb(null, keys);
-  }.bind(this));
+  utils.del.sync(this.path, options);
+  this.data = {};
+  this.emit('del', keys);
   return this;
 };
 
