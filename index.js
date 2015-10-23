@@ -160,7 +160,9 @@ Store.prototype.get = function (key) {
  */
 
 Store.prototype.has = function(key) {
-  return utils.has(this.data, key);
+  var val = utils.has(this.data, key);
+  this.emit('has', key, val);
+  return val;
 };
 
 /**
@@ -185,10 +187,14 @@ Store.prototype.has = function(key) {
  */
 
 Store.prototype.hasOwn = function(key) {
+  var val;
   if (key.indexOf('.') === -1) {
-    return this.data.hasOwnProperty(key);
+    val = this.data.hasOwnProperty(key);
+  } else {
+    val = utils.hasOwn(this.data, key);
   }
-  return utils.hasOwn(this.data, key);
+  this.emit('hasOwn', key, val);
+  return val;
 };
 
 /**
@@ -208,7 +214,8 @@ Store.prototype.save = function(dest) {
 
 /**
  * Delete `keys` from the store, or delete the entire store
- * if no keys are passed.
+ * if no keys are passed. A `del` event is also emitted for each key
+ * deleted.
  *
  * **Note that to delete the entire store you must pass `{force: true}`**
  *
@@ -243,15 +250,18 @@ Store.prototype.del = function(keys, options) {
     return this;
   }
 
-  keys = Object.keys(this.data);
   if (options.force !== true) {
     throw new Error('options.force is required to delete the entire cache.');
   }
 
+  keys = Object.keys(this.data);
+
   // if no keys are passed, delete the entire store
   utils.del.sync(this.path, options);
   this.data = {};
-  this.emit('del', keys);
+  keys.forEach(function (key) {
+    this.emit('del', key);
+  }.bind(this));
   return this;
 };
 
