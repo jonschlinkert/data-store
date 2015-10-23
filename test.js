@@ -16,12 +16,16 @@ var Store = require('./');
 var store;
 
 describe('store', function () {
+  beforeEach(function () {
+    store = new Store('abc');
+  });
+
   afterEach(function () {
+    store.data = {};
     store.del({force: true});
   });
 
   it('should create an instance of Store', function () {
-    store = new Store('abc');
     assert(store instanceof Store);
   });
 
@@ -38,7 +42,6 @@ describe('store', function () {
   });
 
   it('should create a store with the given `name`', function () {
-    store = new Store('abc');
     store.set('foo', 'bar');
     store.data.should.have.property('foo', 'bar');
   });
@@ -66,32 +69,27 @@ describe('store', function () {
   });
 
   it('should `.set()` a value on the store', function () {
-    store = new Store('aaa');
     store.set('one', 'two');
     store.data.one.should.equal('two');
   });
 
   it('should `.set()` an object', function () {
-    store = new Store('aaa');
     store.set({four: 'five', six: 'seven'});
     store.data.four.should.equal('five');
     store.data.six.should.equal('seven');
   });
 
   it('should `.set()` a nested value', function () {
-    store = new Store('aaa');
     store.set('a.b.c.d', {e: 'f'});
     store.data.a.b.c.d.e.should.equal('f');
   });
 
   it('should `.union()` a value on the store', function () {
-    store = new Store('aaa');
     store.union('one', 'two');
     store.data.one.should.eql(['two']);
   });
 
   it('should not union duplicate values', function () {
-    store = new Store('aaa');
     store.union('one', 'two');
     store.data.one.should.eql(['two']);
 
@@ -100,7 +98,6 @@ describe('store', function () {
   });
 
   it('should concat an existing array:', function () {
-    store = new Store('aaa');
     store.union('one', 'a');
     store.data.one.should.eql(['a']);
 
@@ -112,7 +109,6 @@ describe('store', function () {
   });
 
   it('should return true if a key `.has()` on the store', function () {
-    store = new Store('eee');
     store.set('foo', 'bar');
     store.set('baz', null);
     store.set('qux', undefined);
@@ -124,7 +120,6 @@ describe('store', function () {
   });
 
   it('should return true if a nested key `.has()` on the store', function () {
-    store = new Store('xxx');
     store.set('a.b.c.d', {x: 'zzz'});
     store.set('a.b.c.e', {f: null});
     store.set('a.b.g.j', {k: undefined});
@@ -142,7 +137,6 @@ describe('store', function () {
   });
 
    it('should return true if a key exists `.hasOwn()` on the store', function () {
-    store = new Store('eee');
     store.set('foo', 'bar');
     store.set('baz', null);
     store.set('qux', undefined);
@@ -154,7 +148,6 @@ describe('store', function () {
   });
 
   it('should return true if a nested key exists `.hasOwn()` on the store', function () {
-    store = new Store('xxx');
     store.set('a.b.c.d', {x: 'zzz'});
     store.set('a.b.c.e', {f: null});
     store.set('a.b.g.j', {k: undefined});
@@ -172,19 +165,16 @@ describe('store', function () {
   });
 
   it('should `.get()` a stored value', function () {
-    store = new Store('bbb');
     store.set('three', 'four');
     store.get('three').should.equal('four');
   });
 
   it('should `.get()` a nested value', function () {
-    store = new Store('bbb');
     store.set({a: {b: {c: 'd'}}});
     store.get('a.b.c').should.equal('d');
   });
 
   it('should `.del()` a stored value', function () {
-    store = new Store('ccc');
     store.set('a', 'b');
     store.set('c', 'd');
     store.data.should.have.property('a');
@@ -197,7 +187,6 @@ describe('store', function () {
   });
 
   it('should `.del()` multiple stored values', function () {
-    store = new Store('ddd');
     store.set('a', 'b');
     store.set('c', 'd');
     store.set('e', 'f');
@@ -207,10 +196,17 @@ describe('store', function () {
 });
 
 describe('events', function () {
-  it('should emit `set` when an object is set:', function () {
-    store = new Store('bbb');
-    var keys = [];
+  beforeEach(function () {
+    store = new Store('abc');
+  });
 
+  afterEach(function () {
+    store.data = {};
+    store.del({force: true});
+  });
+
+  it('should emit `set` when an object is set:', function () {
+    var keys = [];
     store.on('set', function (key) {
       keys.push(key);
     });
@@ -220,7 +216,6 @@ describe('events', function () {
   });
 
   it('should emit `set` when a key/value pair is set:', function () {
-    store = new Store('bbb');
     var keys = [];
 
     store.on('set', function (key) {
@@ -232,7 +227,6 @@ describe('events', function () {
   });
 
   it('should emit `set` when an object value is set:', function () {
-    store = new Store('bbb');
     var keys = [];
 
     store.on('set', function (key) {
@@ -244,7 +238,6 @@ describe('events', function () {
   });
 
   it('should emit `set` when an array of objects is passed:', function () {
-    store = new Store('bbb');
     var keys = [];
 
     store.on('set', function (key) {
@@ -255,9 +248,19 @@ describe('events', function () {
     keys.should.eql(['a', 'c']);
   });
 
-  it('should emit `del` when a value is delted:', function (done) {
-    store = new Store('bbb');
+  it('should emit `has`:', function (done) {
+    var keys = [];
 
+    store.on('has', function (val) {
+      assert(val);
+      done();
+    });
+
+    store.set('a', 'b');
+    store.has('a');
+  });
+
+  it('should emit `del` when a value is delted:', function (done) {
     store.on('del', function (keys) {
       keys.should.eql('a');
       assert(typeof store.get('a') === 'undefined');
@@ -270,23 +273,22 @@ describe('events', function () {
   });
 
   it('should emit deleted keys on `del`:', function (done) {
-    store = new Store('bbb');
+    var arr = [];
 
-    store.on('del', function (keys) {
-      keys.should.eql(['c', 'a', 'e']);
+    store.on('del', function (key) {
+      arr.push(key);
       assert(Object.keys(store.data).length === 0);
-      done();
     });
 
     store.set('a', 'b');
     store.set('c', 'd');
     store.set('e', 'f');
-    store.data.should.have.properties(['a', 'c', 'e']);
     store.del({force: true});
+    arr.should.eql(['a', 'c', 'e']);
+    done();
   });
 
   it('should throw an error if force is not passed', function () {
-    store = new Store('lll');
     store.set('a', 'b');
     store.set('c', 'd');
     store.set('e', 'f');
