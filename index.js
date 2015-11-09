@@ -137,10 +137,10 @@ Store.prototype.union = function (key, val) {
  */
 
 Store.prototype.get = function (key) {
-  return key ? proto.get.call(this, key) : {
-    name: this.name,
-    data: this.data
-  };
+  if (typeof key === 'undefined') {
+    throw new TypeError('data-store expected key to be a string');
+  }
+  return proto.get.call(this, key);
 };
 
 /**
