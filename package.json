@@ -21,23 +21,22 @@
     "test": "mocha"
   },
   "dependencies": {
-    "base-methods": "^0.3.0",
+    "base-methods": "^0.4.1",
     "graceful-fs": "^4.1.2",
     "has-own-deep": "^0.1.4",
-    "has-value": "^0.2.0",
+    "has-value": "^0.2.1",
     "kind-of": "^2.0.1",
-    "lazy-cache": "^0.2.3",
+    "lazy-cache": "^0.2.4",
     "mkdirp": "^0.5.1",
     "resolve-dir": "^0.1.0",
     "rimraf": "^2.4.3",
-    "union-value": "^0.1.1"
+    "union-value": "^0.2.0"
   },
   "devDependencies": {
     "gulp": "^3.9.0",
-    "gulp-istanbul": "^0.10.1",
-    "gulp-jshint": "^1.11.2",
+    "gulp-eslint": "^1.0.0",
+    "gulp-istanbul": "^0.10.2",
     "gulp-mocha": "^2.1.3",
-    "jshint-stylish": "^2.0.1",
     "mocha": "*",
     "should": "*"
   },
@@ -63,17 +62,5 @@
     "store",
     "union",
     "write"
-  ],
-  "verb": {
-    "related": {
-      "list": [
-        "has-own-deep",
-        "assign-value",
-        "union-value",
-        "get-value",
-        "set-value",
-        "has-value"
-      ]
-    }
-  }
+  ]
 }
