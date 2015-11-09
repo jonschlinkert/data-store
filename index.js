@@ -52,6 +52,11 @@ function Store(name, options) {
   this.name = name;
   this.path = path.join(cwd, name + '.json');
   this.data = readFile(this.path);
+  var self = this;
+
+  this.on('set', function() {
+    self.save();
+  });
 }
 
 /**
@@ -83,17 +88,12 @@ Base.extend(Store);
  * store.set('a', {d: 'e'});
  * //=> {d: 'e'}
  * ```
+ * @name .set
  * @param {String} `key`
  * @param {any} `val` The value to save to `key`. Must be a valid JSON type: String, Number, Array or Object.
  * @return {Object} `Store` for chaining
  * @api public
  */
-
-Store.prototype.set = function(key, val) {
-  proto.set.apply(this, arguments);
-  this.save();
-  return this;
-};
 
 /**
  * Add or append an array of unique values to the given `key`.
