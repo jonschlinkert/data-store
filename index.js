@@ -131,17 +131,11 @@ Store.prototype.union = function (key, val) {
  * //=> {b: 'c'}
  * ```
  *
+ * @name .get
  * @param  {String} `key`
  * @return {any} The value to store for `key`.
  * @api public
  */
-
-Store.prototype.get = function (key) {
-  if (typeof key === 'undefined') {
-    throw new TypeError('data-store expected key to be a string');
-  }
-  return proto.get.call(this, key);
-};
 
 /**
  * Returns `true` if the specified `key` has truthy value.
@@ -153,17 +147,11 @@ Store.prototype.get = function (key) {
  * store.has('c'); //=> false
  * store.has('d'); //=> false
  * ```
- *
+ * @name .has
  * @param  {String} `key`
  * @return {Boolean} Returns true if `key` has
  * @api public
  */
-
-Store.prototype.has = function(key) {
-  var val = utils.has(this.data, key);
-  this.emit('has', key, val);
-  return val;
-};
 
 /**
  * Returns `true` if the specified `key` exists.
