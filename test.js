@@ -28,18 +28,6 @@ describe('store', function() {
     assert(store instanceof Store);
   });
 
-  it('should throw an error if first arg is invalid', function(done) {
-    try {
-      new Store();
-      done(new Error('expected an error'));
-    } catch(err) {
-      assert(err);
-      assert(err.message);
-      assert(err.message === 'expected a string as the first argument');
-      done();
-    }
-  });
-
   it('should create a store with the given `name`', function() {
     store.set('foo', 'bar');
     assert(store.data.hasOwnProperty('foo'));
@@ -116,8 +104,8 @@ describe('store', function() {
     store.set('qux', undefined);
 
     assert(store.has('foo'));
+    assert(store.has('baz'));
     assert(!store.has('bar'));
-    assert(!store.has('baz'));
     assert(!store.has('qux'));
   });
 
@@ -130,10 +118,10 @@ describe('store', function() {
     assert(store.has('a.b.c.d.x'));
     assert(store.has('a.b.c.e'));
     assert(store.has('a.b.g.j'));
+    assert(store.has('a.b.c.e.f'));
 
     assert(!store.has('a.b.bar'));
     assert(!store.has('a.b.c.d.z'));
-    assert(!store.has('a.b.c.e.f'));
     assert(!store.has('a.b.c.e.z'));
     assert(!store.has('a.b.g.j.k'));
     assert(!store.has('a.b.g.j.z'));
@@ -155,15 +143,16 @@ describe('store', function() {
     store.set('a.b.c.e', {f: null});
     store.set('a.b.g.j', {k: undefined});
 
-    assert(!store.hasOwn('a.b.bar'));
     assert(store.hasOwn('a.b.c.d'));
     assert(store.hasOwn('a.b.c.d.x'));
-    assert(!store.hasOwn('a.b.c.d.z'));
-    assert(!store.has('a.b.c.e.f'));
     assert(store.hasOwn('a.b.c.e.f'));
-    assert(!store.hasOwn('a.b.c.e.bar'));
-    assert(!store.has('a.b.g.j.k'));
     assert(store.hasOwn('a.b.g.j.k'));
+    assert(store.hasOwn('a.b.g.j.k'));
+    assert(store.hasOwn('a.b.c.e.f'));
+
+    assert(!store.hasOwn('a.b.bar'));
+    assert(!store.hasOwn('a.b.c.d.z'));
+    assert(!store.hasOwn('a.b.c.e.bar'));
     assert(!store.hasOwn('a.b.g.j.foo'));
   });
 

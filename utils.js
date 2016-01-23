@@ -17,25 +17,24 @@ var fn = require;
 
 require = utils;
 require('graceful-fs', 'fs');
-require('kind-of', 'typeOf');
 require('mkdirp', 'mkdirp');
+require('project-name', 'project');
 require('resolve-dir', 'resolve');
 require('has-own-deep', 'hasOwn');
 require('union-value', 'union');
-require('has-value', 'has');
 require('rimraf', 'del');
 require = fn;
 
-utils.noop = function () {
+utils.noop = function() {
   return;
 };
 
-utils.last = function (arr) {
+utils.last = function(arr) {
   return arr[arr.length - 1];
 };
 
-utils.arrayify = function (val) {
-  return Array.isArray(val) ? val : [val];
+utils.arrayify = function(val) {
+  return val ? (Array.isArray(val) ? val : [val]) : [];
 };
 
 /**
