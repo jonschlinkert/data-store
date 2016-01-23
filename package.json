@@ -21,16 +21,15 @@
     "test": "mocha"
   },
   "dependencies": {
-    "base-methods": "^0.6.2",
+    "base": "^0.6.4",
     "graceful-fs": "^4.1.2",
     "has-own-deep": "^0.1.4",
-    "has-value": "^0.3.0",
-    "kind-of": "^3.0.2",
     "lazy-cache": "^1.0.3",
     "mkdirp": "^0.5.1",
+    "project-name": "^0.2.4",
     "resolve-dir": "^0.1.0",
-    "rimraf": "^2.5.0",
-    "union-value": "^0.2.1"
+    "rimraf": "^2.5.1",
+    "union-value": "^0.2.3"
   },
   "devDependencies": {
     "gulp": "^3.9.0",
@@ -74,6 +73,7 @@
     },
     "plugins": [
       "gulp-format-md"
-    ]
+    ],
+    "layout": "default"
   }
 }
