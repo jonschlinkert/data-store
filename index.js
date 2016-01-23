@@ -5,7 +5,7 @@
  */
 
 var path = require('path');
-var base = require('base-methods');
+var base = require('base');
 var Base = base.namespace('data');
 var proto = Base.prototype;
 var utils = require('./utils');
@@ -14,7 +14,7 @@ var utils = require('./utils');
  * Expose `Store`
  */
 
-module.exports =  Store;
+module.exports = Store;
 
 /**
  * Initialize a new `Store` with the given `name`
@@ -30,33 +30,26 @@ module.exports =  Store;
  * //=> './test/fixtures/abc.json'
  * ```
  *
- * @param  {String} `name` Store name.
+ * @param  {String} `name` Store name to use for the basename of the `.json` file.
  * @param  {Object} `options`
- *   @option {String} [options] `cwd` Current working directory for storage. If not defined, the user home directory is used, based on OS. This is the only option currently, other may be added in the future.
- *   @option {Number} [options] `indent` Number passed to `JSON.stringify` when saving the data. Defaults to `2` if `null` or `undefined`
+ * @param {String} `options.cwd` Current working directory for storage. If not defined, the user home directory is used, based on OS. This is the only option currently, other may be added in the future.
+ * @param {Number} `options.indent` Number passed to `JSON.stringify` when saving the data. Defaults to `2` if `null` or `undefined`
  * @api public
  */
 
 function Store(name, options) {
-  if (typeof name !== 'string') {
-    throw new TypeError('expected a string as the first argument');
-  }
   if (!(this instanceof Store)) {
     return new Store(name, options);
   }
 
+  if (typeof name !== 'string') {
+    options = name;
+    name = null;
+  }
+
   Base.call(this);
   this.options = options || {};
-  var cwd = utils.resolve(this.options.cwd || '~/data-store');
-
-  this.name = name;
-  this.path = path.join(cwd, name + '.json');
-  this.data = readFile(this.path);
-  var self = this;
-
-  this.on('set', function() {
-    self.save();
-  });
+  this.initStore(name);
 }
 
 /**
@@ -64,6 +57,21 @@ function Store(name, options) {
  */
 
 Base.extend(Store);
+
+/**
+ * Initialize store defaults
+ */
+
+Store.prototype.initStore = function(name) {
+  this.name = name || utils.project();
+  this.cwd = utils.resolve(this.options.cwd || '~/data-store');
+  this.path = path.resolve(this.cwd, this.name + '.json');
+  this.data = readFile(this.path);
+
+  this.on('set', function() {
+    this.save();
+  }.bind(this));
+};
 
 /**
  * Assign `value` to `key` and save to disk. Can be
@@ -111,7 +119,7 @@ Base.extend(Store);
  * @api public
  */
 
-Store.prototype.union = function (key, val) {
+Store.prototype.union = function(key, val) {
   utils.union(this.data, key, val);
   this.emit('union', key, val);
   this.save();
@@ -231,7 +239,7 @@ Store.prototype.del = function(keys, options) {
   options = options || {};
 
   if (keys) {
-    keys.forEach(function (key) {
+    keys.forEach(function(key) {
       proto.del.call(this, key);
     }.bind(this));
     this.save();
@@ -247,7 +255,7 @@ Store.prototype.del = function(keys, options) {
   // if no keys are passed, delete the entire store
   utils.del.sync(this.path, options);
   this.data = {};
-  keys.forEach(function (key) {
+  keys.forEach(function(key) {
     this.emit('del', key);
   }.bind(this));
   return this;
@@ -264,7 +272,7 @@ function readFile(fp) {
   try {
     var str = utils.fs.readFileSync(path.resolve(fp), 'utf8');
     return JSON.parse(str);
-  } catch(err) {}
+  } catch (err) {}
   return {};
 }
 
