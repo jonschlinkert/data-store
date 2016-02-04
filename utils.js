@@ -16,13 +16,14 @@ var fn = require;
  */
 
 require = utils;
+require('clone-deep', 'clone');
 require('graceful-fs', 'fs');
+require('has-own-deep', 'hasOwn');
 require('mkdirp', 'mkdirp');
 require('project-name', 'project');
 require('resolve-dir', 'resolve');
-require('has-own-deep', 'hasOwn');
-require('union-value', 'union');
 require('rimraf', 'del');
+require('union-value', 'union');
 require = fn;
 
 utils.noop = function() {

@@ -6,7 +6,7 @@
 
 var path = require('path');
 var base = require('base');
-var Base = base.namespace('data');
+var Base = base.namespace('cache');
 var proto = Base.prototype;
 var utils = require('./utils');
 
@@ -67,6 +67,7 @@ Store.prototype.initStore = function(name) {
   this.cwd = utils.resolve(this.options.cwd || '~/data-store');
   this.path = path.resolve(this.cwd, this.name + '.json');
   this.data = readFile(this.path);
+  this.define('cache', utils.clone(this.data));
 
   this.on('set', function() {
     this.save();
@@ -120,7 +121,7 @@ Store.prototype.initStore = function(name) {
  */
 
 Store.prototype.union = function(key, val) {
-  utils.union(this.data, key, val);
+  utils.union(this.cache, key, val);
   this.emit('union', key, val);
   this.save();
   return this;
@@ -185,9 +186,9 @@ Store.prototype.union = function(key, val) {
 Store.prototype.hasOwn = function(key) {
   var val;
   if (key.indexOf('.') === -1) {
-    val = this.data.hasOwnProperty(key);
+    val = this.cache.hasOwnProperty(key);
   } else {
-    val = utils.hasOwn(this.data, key);
+    val = utils.hasOwn(this.cache, key);
   }
   this.emit('hasOwn', key, val);
   return val;
@@ -204,7 +205,8 @@ Store.prototype.hasOwn = function(key) {
  */
 
 Store.prototype.save = function(dest) {
-  writeJson(dest || this.path, this.data, this.options.indent);
+  this.data = this.cache;
+  writeJson(dest || this.path, this.cache, this.options.indent);
   return this;
 };
 
@@ -250,10 +252,11 @@ Store.prototype.del = function(keys, options) {
     throw new Error('options.force is required to delete the entire cache.');
   }
 
-  keys = Object.keys(this.data);
+  keys = Object.keys(this.cache);
 
   // if no keys are passed, delete the entire store
   utils.del.sync(this.path, options);
+  this.cache = {};
   this.data = {};
   keys.forEach(function(key) {
     this.emit('del', key);
