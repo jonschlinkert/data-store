@@ -1,7 +1,7 @@
 {
   "name": "data-store",
   "description": "Easily get, set and persist config data.",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "homepage": "https://github.com/jonschlinkert/data-store",
   "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
   "repository": "jonschlinkert/data-store",
@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "base": "^0.6.4",
+    "clone-deep": "^0.2.4",
     "graceful-fs": "^4.1.2",
     "has-own-deep": "^0.1.4",
     "lazy-cache": "^1.0.3",
