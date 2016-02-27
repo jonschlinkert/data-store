@@ -5,7 +5,8 @@
  */
 
 var path = require('path');
-var base = require('base');
+var util = require('util');
+var base = require('cache-base');
 var Base = base.namespace('cache');
 var proto = Base.prototype;
 var utils = require('./utils');
@@ -56,7 +57,7 @@ function Store(name, options) {
  * Inherit `Base`
  */
 
-Base.extend(Store);
+util.inherits(Store, Base);
 
 /**
  * Initialize store defaults
@@ -72,6 +73,34 @@ Store.prototype.initStore = function(name) {
   this.on('set', function() {
     this.save();
   }.bind(this));
+};
+
+/**
+ * Create a namespaced "sub-store" that persists data to its file
+ * in a sub-folder of the same directory as the "parent" store.
+ *
+ * ```js
+ * store.create('foo');
+ * store.foo.set('a', 'b');
+ * console.log(store.foo.get('a'));
+ * //=> 'b'
+ * ```
+ * @param {String} `name` The name of the sub-store.
+ * @param {Object} `options`
+ * @return {Object} Returns the sub-store instance.
+ * @api public
+ */
+
+Store.prototype.create = function(name, options) {
+  utils.validateName(this, name);
+
+  var opts = utils.extend({}, options);
+  var base = path.dirname(this.path);
+  opts.cwd = path.join(base, name);
+
+  var substore = new Store(name, opts);
+  this[name] = substore;
+  return substore;
 };
 
 /**
@@ -211,6 +240,21 @@ Store.prototype.save = function(dest) {
 };
 
 /**
+ * Clear in-memory store cache.
+ *
+ * ```js
+ * store.clear();
+ * ```
+ * @api public
+ */
+
+Store.prototype.clear = function() {
+  this.cache = {};
+  this.data = {};
+  return this;
+};
+
+/**
  * Delete `keys` from the store, or delete the entire store
  * if no keys are passed. A `del` event is also emitted for each key
  * deleted.
@@ -256,11 +300,41 @@ Store.prototype.del = function(keys, options) {
 
   // if no keys are passed, delete the entire store
   utils.del.sync(this.path, options);
-  this.cache = {};
-  this.data = {};
+  this.clear();
+
   keys.forEach(function(key) {
     this.emit('del', key);
   }.bind(this));
+  return this;
+};
+
+/**
+ * Returns an array of all Store properties.
+ */
+
+utils.define(Store.prototype, 'keys', {
+  set: function() {
+    throw new Error('store.keys is a getter and cannot be set');
+  },
+  get: function fn() {
+    if (fn.keys) return fn.keys;
+    fn.keys = [];
+    for (var key in this) fn.keys.push(key);
+    return fn.keys;
+  }
+});
+
+/**
+ * Define a non-enumerable property on the instance.
+ *
+ * @param {String} `key`
+ * @param {any} `value`
+ * @return {Object} Returns the instance for chaining.
+ * @api public
+ */
+
+Store.prototype.define = function(key, value) {
+  utils.define(this, key, value);
   return this;
 };
 
