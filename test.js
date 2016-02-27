@@ -46,17 +46,35 @@ describe('store', function() {
       store = new Store('abc', {cwd: 'actual'});
 
       store.set('foo', 'bar');
-      assert.equal(path.basename(store.path), 'data.json');
+      assert.equal(path.basename(store.path), 'abc.json');
       assert(store.data.hasOwnProperty('foo'));
       assert.equal(store.data.foo, 'bar');
-      assert.equal(fs.existsSync(path.join(__dirname, 'actual/abc', 'data.json')), true);
+      assert.equal(fs.existsSync(path.join(__dirname, 'actual/abc.json')), true);
     });
 
     it('should create a store using the given `indent` value', function() {
       store = new Store('abc', {cwd: 'actual', indent: 0});
       store.set('foo', 'bar');
-      var contents = fs.readFileSync(path.join(__dirname, 'actual/abc', 'data.json'), 'utf8');
+      var contents = fs.readFileSync(path.join(__dirname, 'actual/abc.json'), 'utf8');
       assert.equal(contents, '{"foo":"bar"}');
+    });
+  });
+
+  describe('sub-store', function() {
+    it('should create a "sub-store" with the given name', function() {
+      var created = store.create('created');
+      assert.equal(created.name, 'created');
+    });
+
+    it('should create a "sub-store" with the project name when no name is passed', function() {
+      var foo = store.create();
+      assert.equal(foo.name, 'data-store');
+    });
+
+    it('should set values on a sub-store', function() {
+      var foo = store.create('created');
+      foo.set('one', 'two');
+      assert.equal(foo.get('one'), 'two');
     });
   });
 

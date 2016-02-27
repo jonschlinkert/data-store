@@ -64,9 +64,9 @@ util.inherits(Store, Base);
  */
 
 Store.prototype.initStore = function(name) {
-  this.name = name || utils.project();
+  this.name = name || utils.project(process.cwd());
   this.cwd = utils.resolve(this.options.cwd || '~/.data-store');
-  this.path = path.resolve(this.cwd, this.name, 'data.json');
+  this.path = path.resolve(this.cwd, this.name + '.json');
   this.data = readFile(this.path);
   this.define('cache', utils.clone(this.data));
 
@@ -93,9 +93,10 @@ Store.prototype.initStore = function(name) {
 
 Store.prototype.create = function(name, options) {
   utils.validateName(this, name);
-  var substore = new Store(name);
-  var base = path.dirname(this.path);
-  substore.path = path.join(base, 'substores', name + '.json');
+  var dir = path.dirname(this.path);
+  var basename = path.basename(this.path, path.extname(this.path));
+  var cwd = path.join(dir, basename);
+  var substore = new Store(name, {cwd: cwd});
   this[name] = substore;
   return substore;
 };
