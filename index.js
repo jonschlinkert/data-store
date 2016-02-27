@@ -93,10 +93,8 @@ Store.prototype.initStore = function(name) {
 
 Store.prototype.create = function(name, options) {
   utils.validateName(this, name);
-  var dir = path.dirname(this.path);
-  var basename = path.basename(this.path, path.extname(this.path));
-  var cwd = path.join(dir, basename);
-  var substore = new Store(name, {cwd: cwd});
+  var cwd = path.join(path.dirname(this.path), this.name);
+  var substore = new Store(name, { cwd: cwd });
   this[name] = substore;
   return substore;
 };
@@ -238,7 +236,7 @@ Store.prototype.save = function(dest) {
 };
 
 /**
- * Clear in-memory store cache.
+ * Clear in-memory cache.
  *
  * ```js
  * store.clear();
