@@ -87,7 +87,7 @@ console.log(store.foo.get('a'));
 //=> 'b'
 ```
 
-### [.set](index.js#L134)
+### [.set](index.js#L132)
 
 Assign `value` to `key` and save to disk. Can be a key-value pair or an object.
 
@@ -119,7 +119,7 @@ store.set('a', {d: 'e'});
 //=> {d: 'e'}
 ```
 
-### [.union](index.js#L150)
+### [.union](index.js#L148)
 
 Add or append an array of unique values to the given `key`.
 
@@ -138,7 +138,7 @@ store.get('a');
 //=> ['a', 'b', 'c']
 ```
 
-### [.get](index.js#L176)
+### [.get](index.js#L174)
 
 Get the stored `value` of `key`, or return the entire store if no `key` is defined.
 
@@ -158,7 +158,7 @@ store.get();
 //=> {b: 'c'}
 ```
 
-### [.has](index.js#L192)
+### [.has](index.js#L190)
 
 Returns `true` if the specified `key` has truthy value.
 
@@ -177,7 +177,7 @@ store.has('c'); //=> false
 store.has('d'); //=> false
 ```
 
-### [.hasOwn](index.js#L213)
+### [.hasOwn](index.js#L211)
 
 Returns `true` if the specified `key` exists.
 
@@ -201,7 +201,7 @@ store.hasOwn('d'); //=> true
 store.hasOwn('foo'); //=> false
 ```
 
-### [.save](index.js#L234)
+### [.save](index.js#L232)
 
 Persist the store to disk.
 
@@ -215,9 +215,9 @@ Persist the store to disk.
 store.save();
 ```
 
-### [.clear](index.js#L249)
+### [.clear](index.js#L247)
 
-Clear in-memory store cache.
+Clear in-memory cache.
 
 **Example**
 
@@ -225,7 +225,7 @@ Clear in-memory store cache.
 store.clear();
 ```
 
-### [.del](index.js#L274)
+### [.del](index.js#L272)
 
 Delete `keys` from the store, or delete the entire store if no keys are passed. A `del` event is also emitted for each key deleted.
 
@@ -245,7 +245,7 @@ store.del();
 store.del({force: true});
 ```
 
-### [.define](index.js#L336)
+### [.define](index.js#L334)
 
 Define a non-enumerable property on the instance.
 
