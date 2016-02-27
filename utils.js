@@ -39,7 +39,6 @@ utils.arrayify = function(val) {
  */
 
 utils.validateName = function(store, name) {
-  store.keys = store.keys || (store.keys = utils.getKeys(store));
   if (~store.keys.indexOf(name) || /\W/.test(name)) {
     throw utils.formatConflictError(name);
   }
