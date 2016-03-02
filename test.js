@@ -11,6 +11,7 @@ require('mocha');
 var fs = require('fs');
 var path = require('path');
 var assert = require('assert');
+var utils = require('./utils');
 var Store = require('./');
 var store;
 

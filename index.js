@@ -49,6 +49,7 @@ function Store(name, options) {
   }
 
   Base.call(this);
+  this.isStore = true;
   this.options = options || {};
   this.initStore(name);
 }
@@ -92,6 +93,9 @@ Store.prototype.initStore = function(name) {
  */
 
 Store.prototype.create = function(name, options) {
+  if (utils.isStore(this, name)) {
+    return this[name];
+  }
   utils.validateName(this, name);
   var cwd = path.join(path.dirname(this.path), this.name);
   var substore = new Store(name, { cwd: cwd });

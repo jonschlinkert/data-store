@@ -31,17 +31,26 @@ utils.arrayify = function(val) {
 };
 
 /**
- * Throw an error if sub-store `name` has non-word characters, or
- * `name` is the same as a key on `store`.
+ * Throw an error if sub-store `name` is already a key on `store`.
  *
  * @param {Object} `store`
  * @param {String} `name`
  */
 
 utils.validateName = function(store, name) {
-  if (~store.keys.indexOf(name) || /\W/.test(name)) {
+  if (~store.keys.indexOf(name) && !utils.isStore(store, name)) {
     throw utils.formatConflictError(name);
   }
+};
+
+/**
+ * Return true if `name` is a store object.
+ */
+
+utils.isStore = function(store, name) {
+  return !!store[name]
+    && (typeof store[name] === 'object')
+    && store[name].isStore === true;
 };
 
 /**
