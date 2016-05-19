@@ -97,9 +97,16 @@ Store.prototype.create = function(name, options) {
     return this[name];
   }
   utils.validateName(this, name);
+
+  var self = this;
   var cwd = path.join(path.dirname(this.path), this.name);
   var substore = new Store(name, { cwd: cwd });
   this[name] = substore;
+
+  substore.on('set', function(key, val) {
+    self.set([name, key], val);
+  });
+
   return substore;
 };
 

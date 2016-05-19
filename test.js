@@ -77,6 +77,21 @@ describe('store', function() {
       foo.set('one', 'two');
       assert.equal(foo.get('one'), 'two');
     });
+
+    it('should expose sub-store data on parent store', function() {
+      var foo = store.create('created');
+      foo.set('one', 'two');
+      assert.equal(foo.get('one'), 'two');
+
+      assert.equal(store.get('created.one'), 'two');
+    });
+
+    it('should work with dots', function() {
+      var foo = store.create('one.two');
+      foo.set('a', 'b');
+      assert.equal(foo.get('a'), 'b');
+      assert.equal(store.get('one.two.a'), 'b');
+    });
   });
 
   describe('set', function() {

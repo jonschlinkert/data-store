@@ -3,7 +3,7 @@
 var fs = require('fs');
 
 module.exports = function(verb) {
-  verb.extendWith(require('verb-readme-generator'));
+  verb.use(require('verb-readme-generator'));
   verb.helper('read', function(fp) {
     return fs.readFileSync(fp, 'utf8');
   });

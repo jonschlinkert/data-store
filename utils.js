@@ -1,13 +1,15 @@
 'use strict';
 
-/**
- * Expose the `lazy` object
- */
-
-var utils = require('lazy-cache')(require);
+var utils = module.exports = require('lazy-cache')(require);
 var fn = require;
 require = utils; // eslint-disable-line
+
+/**
+ * Utils
+ */
+
 require('clone-deep', 'clone');
+require('extend-shallow', 'extend');
 require('define-property', 'define');
 require('graceful-fs', 'fs');
 require('has-own-deep', 'hasOwn');
@@ -67,9 +69,3 @@ utils.formatConflictError = function(name) {
     + 'Please choose a different store name.';
   return new Error(msg);
 };
-
-/**
- * Expose `utils`
- */
-
-module.exports = utils;
