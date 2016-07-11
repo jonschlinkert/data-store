@@ -8,6 +8,7 @@ var path = require('path');
 var util = require('util');
 var base = require('cache-base');
 var Base = base.namespace('cache');
+var debug = require('debug')('data-store');
 var proto = Base.prototype;
 var utils = require('./utils');
 
@@ -68,6 +69,8 @@ Store.prototype.initStore = function(name) {
   this.name = name || utils.project(process.cwd());
   this.cwd = utils.resolve(this.options.cwd || '~/.data-store');
   this.path = path.resolve(this.cwd, this.name + '.json');
+  debug('Initializing store <%s>', this.path);
+
   this.data = readFile(this.path);
   this.define('cache', utils.clone(this.data));
 
@@ -226,7 +229,6 @@ Store.prototype.hasOwn = function(key) {
   } else {
     val = utils.hasOwn(this.cache, key);
   }
-  this.emit('hasOwn', key, val);
   return val;
 };
 
@@ -304,11 +306,10 @@ Store.prototype.del = function(keys, options) {
   }
 
   keys = Object.keys(this.cache);
+  this.clear();
 
   // if no keys are passed, delete the entire store
   utils.del.sync(this.path, options);
-  this.clear();
-
   keys.forEach(function(key) {
     this.emit('del', key);
   }.bind(this));
