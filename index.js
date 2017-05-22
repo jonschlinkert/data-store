@@ -68,12 +68,13 @@ util.inherits(Store, Base);
 Store.prototype.initStore = function(name) {
   this.name = name || utils.project(process.cwd());
   this.cwd = utils.resolve(this.options.cwd || '~/.data-store');
-  this.path = path.resolve(this.cwd, this.name + '.json');
+  this.path = this.options.path || path.resolve(this.cwd, this.name + '.json');
+  this.relative = path.relative(process.cwd(), this.path);
+
   debug('Initializing store <%s>', this.path);
 
-  this.data = readFile(this.path);
+  this.data = this.readFile(this.path);
   this.define('cache', utils.clone(this.data));
-
   this.on('set', function() {
     this.save();
   }.bind(this));
@@ -355,13 +356,15 @@ Store.prototype.define = function(key, value) {
  * @return {Object}
  */
 
-function readFile(fp) {
+Store.prototype.readFile = function(filepath) {
   try {
-    var str = utils.fs.readFileSync(path.resolve(fp), 'utf8');
+    var str = utils.fs.readFileSync(path.resolve(filepath), 'utf8');
+    this.loadedConfig = true;
     return JSON.parse(str);
   } catch (err) {}
+  this.loadedConfig = false;
   return {};
-}
+};
 
 /**
  * Synchronously write files to disk, also creating any
