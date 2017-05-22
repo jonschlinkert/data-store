@@ -4,6 +4,11 @@
   "version": "0.16.1",
   "homepage": "https://github.com/jonschlinkert/data-store",
   "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
+  "contributors": [
+    "Brian Woodward (https://twitter.com/doowb)",
+    "Charlike Mike Reagent (https://i.am.charlike.online)",
+    "Jon Schlinkert (http://twitter.com/jonschlinkert)"
+  ],
   "repository": "jonschlinkert/data-store",
   "bugs": {
     "url": "https://github.com/jonschlinkert/data-store/issues"
@@ -11,8 +16,6 @@
   "license": "MIT",
   "files": [
     "index.js",
-    "LICENSE",
-    "README.md",
     "utils.js"
   ],
   "main": "index.js",
