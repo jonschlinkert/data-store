@@ -67,7 +67,7 @@ util.inherits(Store, Base);
 
 Store.prototype.initStore = function(name) {
   this.name = name || utils.project(process.cwd());
-  this.cwd = utils.resolve(this.options.cwd || '~/.data-store');
+  this.cwd = utils.resolve(this.options.cwd || '~/.config/data-store');
   this.path = this.options.path || path.resolve(this.cwd, this.name + '.json');
   this.relative = path.relative(process.cwd(), this.path);
 
