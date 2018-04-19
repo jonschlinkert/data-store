@@ -2,9 +2,7 @@
 
 > Easily get, set and persist config data.
 
-You might also be interested in [base-store](https://github.com/node-base/base-store).
-
-## Table of Contents
+Please consider following this project's author, [Jon Schlinkert](https://github.com/jonschlinkert), and consider starring the project to show your :heart: and support.
 
 - [Install](#install)
 - [Usage example](#usage-example)
@@ -27,26 +25,21 @@ $ npm install --save data-store
 // default cwd is `~/data-store/` (in user-home)
 var store = require('data-store')('my-app');
 
-store
-  .set('a', 'b')
-  .set({c: 'd'})
-  .set('e.f', 'g')
+store.set('a', 'b')
+  .set({ c: 'd' })
+  .set('e.f', 'g');
 
 console.log(store.get('e.f'));
 //=> 'g'
 
 console.log(store.get());
-//=> {name: 'app', data: {a: 'b', c: 'd', e: {f: 'g' }}}
+//=> { name: 'app', data: { a: 'b', c: 'd', e: { f: 'g' } } }
 
 console.log(store.data);
-//=> {a: 'b', c: 'd', e: {f: 'g'}}
+//=> { a: 'b', c: 'd', e: { f: 'g' } }
 ```
 
 ## API
-
-### [Store](index.js#L42)
-
-Initialize a new `Store` with the given `name` and `options`.
 
 **Params**
 
@@ -58,35 +51,16 @@ Initialize a new `Store` with the given `name` and `options`.
 **Example**
 
 ```js
-var store = require('data-store')('abc');
+const store = require('data-store')('abc');
 //=> '~/data-store/a.json'
 
-var store = require('data-store')('abc', {
+const store = require('data-store')('abc', {
   cwd: 'test/fixtures'
 });
 //=> './test/fixtures/abc.json'
 ```
 
-### [.create](index.js#L99)
-
-Create a namespaced "sub-store" that persists data to its file in a sub-folder of the same directory as the "parent" store.
-
-**Params**
-
-* `name` **{String}**: The name of the sub-store.
-* `options` **{Object}**
-* `returns` **{Object}**: Returns the sub-store instance.
-
-**Example**
-
-```js
-store.create('foo');
-store.foo.set('a', 'b');
-console.log(store.foo.get('a'));
-//=> 'b'
-```
-
-### [.set](index.js#L147)
+### [.set](index.js#L82)
 
 Assign `value` to `key` and save to disk. Can be a key-value pair or an object.
 
@@ -106,38 +80,9 @@ store.set('a', 'b');
 // extend the store with an object
 store.set({a: 'b'});
 //=> {a: 'b'}
-
-// extend the the given value
-store.set('a', {b: 'c'});
-store.set('a', {d: 'e'}, true);
-//=> {a: {b 'c', d: 'e'}}
-
-// overwrite the the given value
-store.set('a', {b: 'c'});
-store.set('a', {d: 'e'});
-//=> {d: 'e'}
 ```
 
-### [.union](index.js#L163)
-
-Add or append an array of unique values to the given `key`.
-
-**Params**
-
-* `key` **{String}**
-* `returns` **{any}**: The array to add or append for `key`.
-
-**Example**
-
-```js
-store.union('a', ['a']);
-store.union('a', ['b']);
-store.union('a', ['c']);
-store.get('a');
-//=> ['a', 'b', 'c']
-```
-
-### [.get](index.js#L189)
+### [.union](index.js#L114)
 
 Get the stored `value` of `key`, or return the entire store if no `key` is defined.
 
@@ -157,9 +102,29 @@ store.get();
 //=> {b: 'c'}
 ```
 
-### [.has](index.js#L205)
+### [.get](index.js#L142)
 
-Returns `true` if the specified `key` has truthy value.
+Get the stored `value` of `key`, or return the entire store if no `key` is defined.
+
+**Params**
+
+* `key` **{String}**
+* `returns` **{any}**: The value to store for `key`.
+
+**Example**
+
+```js
+store.set('a', {b: 'c'});
+store.get('a');
+//=> {b: 'c'}
+
+store.get();
+//=> {b: 'c'}
+```
+
+### [.has](index.js#L162)
+
+Returns `true` if the specified `key` has a value.
 
 **Params**
 
@@ -175,10 +140,6 @@ store.has('a'); //=> true
 store.has('c'); //=> false
 store.has('d'); //=> false
 ```
-
-### [.hasOwn](index.js#L226)
-
-Returns `true` if the specified `key` exists.
 
 **Params**
 
@@ -200,34 +161,6 @@ store.hasOwn('d'); //=> true
 store.hasOwn('foo'); //=> false
 ```
 
-### [.save](index.js#L246)
-
-Persist the store to disk.
-
-**Params**
-
-* `dest` **{String}**: Optionally define an alternate destination file path.
-
-**Example**
-
-```js
-store.save();
-```
-
-### [.clear](index.js#L261)
-
-Clear in-memory cache.
-
-**Example**
-
-```js
-store.clear();
-```
-
-### [.del](index.js#L286)
-
-Delete `keys` from the store, or delete the entire store if no keys are passed. A `del` event is also emitted for each key deleted.
-
 **Note that to delete the entire store you must pass `{force: true}`**
 
 **Params**
@@ -244,38 +177,34 @@ store.del();
 store.del({force: true});
 ```
 
-### [.define](index.js#L347)
+**Example**
 
-Define a non-enumerable property on the instance.
-
-**Params**
-
-* `key` **{String}**
-* `value` **{any}**
-* `returns` **{Object}**: Returns the instance for chaining.
+```js
+store.save();
+```
 
 ## About
 
-### Related projects
-
-* [base-store](https://www.npmjs.com/package/base-store): Plugin for getting and persisting config values with your base-methods application. Adds a 'store' object… [more](https://github.com/node-base/base-store) | [homepage](https://github.com/node-base/base-store "Plugin for getting and persisting config values with your base-methods application. Adds a 'store' object that exposes all of the methods from the data-store library. Also now supports sub-stores!")
-* [cache-base](https://www.npmjs.com/package/cache-base): Basic object cache with `get`, `set`, `del`, and `has` methods for node.js/javascript projects. | [homepage](https://github.com/jonschlinkert/cache-base "Basic object cache with `get`, `set`, `del`, and `has` methods for node.js/javascript projects.")
-* [get-value](https://www.npmjs.com/package/get-value): Use property paths (`a.b.c`) to get a nested value from an object. | [homepage](https://github.com/jonschlinkert/get-value "Use property paths (`a.b.c`) to get a nested value from an object.")
-* [set-value](https://www.npmjs.com/package/set-value): Create nested values and any intermediaries using dot notation (`'a.b.c'`) paths. | [homepage](https://github.com/jonschlinkert/set-value "Create nested values and any intermediaries using dot notation (`'a.b.c'`) paths.")
-
-### Contributing
+<details>
+<summary><strong>Contributing</strong></summary>
 
 Pull requests and stars are always welcome. For bugs and feature requests, [please create an issue](../../issues/new).
 
-### Contributors
+</details>
 
-| **Commits** | **Contributor** | 
-| --- | --- |
-| 128 | [jonschlinkert](https://github.com/jonschlinkert) |
-| 3 | [doowb](https://github.com/doowb) |
-| 2 | [tunnckoCore](https://github.com/tunnckoCore) |
+<details>
+<summary><strong>Running Tests</strong></summary>
 
-### Building docs
+Running and reviewing unit tests is a great way to get familiarized with a library and its API. You can install dependencies and run tests with the following command:
+
+```sh
+$ npm install && npm test
+```
+
+</details>
+
+<details>
+<summary><strong>Building docs</strong></summary>
 
 _(This project's readme.md is generated by [verb](https://github.com/verbose/verb-generate-readme), please don't edit the readme directly. Any changes to the readme must be made in the [.verb.md](.verb.md) readme template.)_
 
@@ -285,26 +214,40 @@ To generate the readme, run the following command:
 $ npm install -g verbose/verb#dev verb-generate-readme && verb
 ```
 
-### Running tests
+</details>
 
-Running and reviewing unit tests is a great way to get familiarized with a library and its API. You can install dependencies and run tests with the following command:
+### Related projects
 
-```sh
-$ npm install && npm test
-```
+You might also be interested in these projects:
+
+* [base](https://www.npmjs.com/package/base): Framework for rapidly creating high quality, server-side node.js applications, using plugins like building blocks | [homepage](https://github.com/node-base/base "Framework for rapidly creating high quality, server-side node.js applications, using plugins like building blocks")
+* [cache-base](https://www.npmjs.com/package/cache-base): Basic object cache with `get`, `set`, `del`, and `has` methods for node.js/javascript projects. | [homepage](https://github.com/jonschlinkert/cache-base "Basic object cache with `get`, `set`, `del`, and `has` methods for node.js/javascript projects.")
+* [get-value](https://www.npmjs.com/package/get-value): Use property paths like 'a.b.c' to get a nested value from an object. Even works… [more](https://github.com/jonschlinkert/get-value) | [homepage](https://github.com/jonschlinkert/get-value "Use property paths like 'a.b.c' to get a nested value from an object. Even works when keys have dots in them (no other dot-prop library can do this!).")
+* [has-value](https://www.npmjs.com/package/has-value): Returns true if a value exists, false if empty. Works with deeply nested values using… [more](https://github.com/jonschlinkert/has-value) | [homepage](https://github.com/jonschlinkert/has-value "Returns true if a value exists, false if empty. Works with deeply nested values using object paths.")
+* [set-value](https://www.npmjs.com/package/set-value): Create nested values and any intermediaries using dot notation (`'a.b.c'`) paths. | [homepage](https://github.com/jonschlinkert/set-value "Create nested values and any intermediaries using dot notation (`'a.b.c'`) paths.")
+
+### Contributors
+
+| **Commits** | **Contributor** | 
+| --- | --- |
+| 135 | [jonschlinkert](https://github.com/jonschlinkert) |
+| 3 | [doowb](https://github.com/doowb) |
+| 2 | [charlike-old](https://github.com/charlike-old) |
+| 1 | [jamen](https://github.com/jamen) |
 
 ### Author
 
 **Jon Schlinkert**
 
-* [github/jonschlinkert](https://github.com/jonschlinkert)
-* [twitter/jonschlinkert](https://twitter.com/jonschlinkert)
+* [LinkedIn Profile](https://linkedin.com/in/jonschlinkert)
+* [GitHub Profile](https://github.com/jonschlinkert)
+* [Twitter Profile](https://twitter.com/jonschlinkert)
 
 ### License
 
-Copyright © 2017, [Jon Schlinkert](https://github.com/jonschlinkert).
+Copyright © 2018, [Jon Schlinkert](https://github.com/jonschlinkert).
 Released under the [MIT License](LICENSE).
 
 ***
 
-_This file was generated by [verb-generate-readme](https://github.com/verbose/verb-generate-readme), v0.6.0, on May 22, 2017._
+_This file was generated by [verb-generate-readme](https://github.com/verbose/verb-generate-readme), v0.6.0, on April 19, 2018._

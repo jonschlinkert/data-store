@@ -11,8 +11,3 @@ node_js:
   - '6'
   - '5'
   - '4'
-matrix:
-  fast_finish: true
-  allow_failures:
-    - node_js: '5'
-    - node_js: '4'
