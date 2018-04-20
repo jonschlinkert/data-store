@@ -4,12 +4,12 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const assert = require('assert');
-const Emitter = require('events');
 const flatten = (...args) => [].concat.apply([], args);
 const unique = arr => arr.filter((v, i) => arr.indexOf(v) === i);
 const mode = opts => opts.mode || (parseInt('0777', 8) & ~process.umask());
 const strip = str => str.replace(/\\(?=\.)/g, '');
 const split = str => str.split(/(?<!\\)\./).map(strip);
+const env = process.env;
 
 /**
  * Initialize a new `Store` with the given `name`
@@ -32,7 +32,7 @@ const split = str => str.split(/(?<!\\)\./).map(strip);
  * @api public
  */
 
-class Store extends Emitter {
+class Store {
   constructor(name, options = {}, defaults = {}) {
     if (typeof name !== 'string') {
       defaults = options;
@@ -41,13 +41,12 @@ class Store extends Emitter {
     }
 
     assert.equal(typeof name, 'string', 'expected name to be a string');
-    super();
     this.name = name;
     this.options = options;
     this.indent = this.options.indent != null ? this.options.indent : 2;
-    this.folder = this.options.folder || '.config/.data-store';
-    this.cwd = this.options.cwd || os.homedir();
-    this.base = path.join(this.cwd, this.folder);
+    this.folder = this.options.folder || '.config';
+    this.home = this.options.home || env.XDG_CONFIG_HOME || os.homedir();
+    this.base = path.join(this.home, this.folder, 'data-store');
     this.path = this.options.path || path.join(this.base, this.name + '.json');
     this.data = Object.assign({}, defaults, this.data);
   }
@@ -81,7 +80,6 @@ class Store extends Emitter {
     }
     assert.equal(typeof key, 'string', 'expected key to be a string');
     set(this.data, key, val);
-    this.emit('set', key, val);
     this.save();
     return this;
   }
@@ -202,21 +200,36 @@ class Store extends Emitter {
    */
 
   del(key) {
-    if (!key) key = this.keys;
     if (Array.isArray(key)) {
       for (const k of key) this.del(k);
       return this;
     }
     assert.equal(typeof key, 'string', 'expected key to be a string');
     if (del(this.data, key)) {
-      this.emit('del', key);
       this.save();
     }
     return this;
   }
 
   /**
+   * Reset the store to an empty object.
+   *
+   * ```js
+   * store.clear();
+   * ```
+   *
+   * @api public
+   */
+
+  clear() {
+    this.data = {};
+    this.save();
+    return this;
+  }
+
+  /**
    * Stringify the store
+   * @return {string}
    */
 
   json(replacer = null, space = this.indent) {
@@ -225,10 +238,7 @@ class Store extends Emitter {
 
   /**
    * Persist the store to the file system.
-   *
-   * ```js
-   * store.save();
-   * ```
+   * @return {object}
    */
 
   save() {
@@ -258,8 +268,15 @@ class Store extends Emitter {
   }
 
   /**
-   * Get and set the `store.data` object that is used for storing values.
-   * This object is persisted to the file system.
+   * Getter/setter for the `store.data` object, which holds the values
+   * that are persisted to the file system.
+   *
+   * ```js
+   * console.log(store.data); //=> {}
+   * store.data.foo = 'bar';
+   * console.log(store.get('foo')); //=> 'bar'
+   * ```
+   * @return {object}
    */
 
   set data(val) {
@@ -268,16 +285,6 @@ class Store extends Emitter {
   }
   get data() {
     return this._data || (this._data = this.load());
-  }
-
-  /**
-   * Convenience getter for `Object.keys(store.data)`.
-   * @return {array}
-   * @api public
-   */
-
-  get keys() {
-    return Object.keys(this.data);
   }
 }
 

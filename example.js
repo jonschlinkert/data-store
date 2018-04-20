@@ -16,3 +16,5 @@ console.log(store.data);
 //=> { a: 'b', c: 'd', e: { f: 'g' } }
 
 console.log(store.keys)
+
+console.log(store.clear())
