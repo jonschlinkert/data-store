@@ -25,43 +25,36 @@ const split = str => str.split(/(?<!\\)\./).map(strip);
  * //=> './test/fixtures/abc.json'
  * ```
  *
- * @param  {String} `name` Store name to use for the basename of the `.json` file.
- * @param  {Object} `options`
- * @param {String} `options.cwd` Current working directory for storage. If not defined, the user home directory is used, based on OS. This is the only option currently, other may be added in the future.
- * @param {Number} `options.indent` Number passed to `JSON.stringify` when saving the data. Defaults to `2` if `null` or `undefined`
+ * @param {string} `name` Store name to use for the basename of the `.json` file.
+ * @param {object} `options`
+ * @param {string} `options.cwd` Current working directory for storage. If not defined, the user home directory is used, based on OS. This is the only option currently, other may be added in the future.
+ * @param {number} `options.indent` Number passed to `JSON.stringify` when saving the data. Defaults to `2` if `null` or `undefined`
  * @api public
  */
 
 class Store extends Emitter {
   constructor(name, options = {}, defaults = {}) {
-    assert.equal(typeof name, 'string', 'expected options.name to be a string');
+    if (typeof name !== 'string') {
+      defaults = options;
+      options = name || {};
+      name = options.name;
+    }
+
+    assert.equal(typeof name, 'string', 'expected name to be a string');
     super();
     this.name = name;
     this.options = options;
     this.indent = this.options.indent != null ? this.options.indent : 2;
+    this.folder = this.options.folder || '.config/.data-store';
     this.cwd = this.options.cwd || os.homedir();
-    this.folder = this.options.folder || '.data-store';
-    this.dirname = path.join(this.cwd, this.folder);
-    this.path = this.options.path || path.join(this.dirname, this.name + '.json');
-    this.relative = path.relative(process.cwd(), this.path);
+    this.base = path.join(this.cwd, this.folder);
+    this.path = this.options.path || path.join(this.base, this.name + '.json');
     this.data = Object.assign({}, defaults, this.data);
   }
 
   /**
-   * Get and set the `store.data` object that is persisted.
-   */
-
-  set data(val) {
-    this._data = val;
-    this.save();
-  }
-  get data() {
-    return this._data || (this._data = this.load());
-  }
-
-  /**
-   * Assign `value` to `key` and save to disk. Can be
-   * a key-value pair or an object.
+   * Assign `value` to `key` and save to disk. Can be a key-value pair,
+   * array of objects, or an object.
    *
    * ```js
    * // key, value
@@ -73,9 +66,9 @@ class Store extends Emitter {
    * //=> {a: 'b'}
    * ```
    * @name .set
-   * @param {String} `key`
+   * @param {string} `key`
    * @param {any} `val` The value to save to `key`. Must be a valid JSON type: String, Number, Array or Object.
-   * @return {Object} `Store` for chaining
+   * @return {object} `Store` for chaining
    * @api public
    */
 
@@ -106,7 +99,7 @@ class Store extends Emitter {
    * //=> {b: 'c'}
    * ```
    * @name .union
-   * @param  {String} `key`
+   * @param {string} `key`
    * @return {any} The value to store for `key`.
    * @api public
    */
@@ -134,28 +127,29 @@ class Store extends Emitter {
    * ```
    *
    * @name .get
-   * @param  {String} `key`
+   * @param {string} `key`
    * @return {any} The value to store for `key`.
    * @api public
    */
 
   get(key) {
-    return key ? get(this.data, key) : this.data;
+    return key ? get(this.data, key) : Object.assign({}, this.data);
   }
 
   /**
    * Returns `true` if the specified `key` has a value.
    *
    * ```js
-   * store.set('a', 'b');
+   * store.set('a', 42);
    * store.set('c', null);
+   *
    * store.has('a'); //=> true
-   * store.has('c'); //=> false
+   * store.has('c'); //=> true
    * store.has('d'); //=> false
    * ```
    * @name .has
-   * @param  {String} `key`
-   * @return {Boolean} Returns true if `key` has
+   * @param {string} `key`
+   * @return {boolean} Returns true if `key` has
    * @api public
    */
 
@@ -172,16 +166,18 @@ class Store extends Emitter {
    * store.set('b', false);
    * store.set('c', null);
    * store.set('d', true);
+   * store.set('e', undefined);
    *
    * store.hasOwn('a'); //=> true
    * store.hasOwn('b'); //=> true
    * store.hasOwn('c'); //=> true
    * store.hasOwn('d'); //=> true
+   * store.hasOwn('e'); //=> true
    * store.hasOwn('foo'); //=> false
    * ```
    *
-   * @param  {String} `key`
-   * @return {Boolean} Returns true if `key` exists
+   * @param {string} `key`
+   * @return {boolean} Returns true if `key` exists
    * @api public
    */
 
@@ -191,21 +187,17 @@ class Store extends Emitter {
   }
 
   /**
-   * Delete `keys` from the store, or delete the entire store
-   * if no keys are passed. A `del` event is also emitted for each key
-   * deleted.
-   *
-   * **Note that to delete the entire store you must pass `{force: true}`**
+   * Delete one or more properties from the store.
    *
    * ```js
-   * store.del();
-   *
-   * // to delete paths outside cwd
-   * store.del({force: true});
+   * store.set('foo.bar', 'baz');
+   * console.log(store.data); //=> { foo: { bar: 'baz' } }
+   * store.del('foo.bar');
+   * console.log(store.data); //=> { foo: {} }
+   * store.del('foo');
+   * console.log(store.data); //=> {}
    * ```
-   *
-   * @param {String|Array|Object} `keys` Keys to remove, or options.
-   * @param {Object} `options`
+   * @param {string|Array} `keys` One or more properties to delete.
    * @api public
    */
 
@@ -216,9 +208,10 @@ class Store extends Emitter {
       return this;
     }
     assert.equal(typeof key, 'string', 'expected key to be a string');
-    delete this.data[key];
-    this.emit('del', key);
-    this.save();
+    if (del(this.data, key)) {
+      this.emit('del', key);
+      this.save();
+    }
     return this;
   }
 
@@ -236,7 +229,6 @@ class Store extends Emitter {
    * ```js
    * store.save();
    * ```
-   * @api public
    */
 
   save() {
@@ -247,7 +239,7 @@ class Store extends Emitter {
 
   /**
    * Load the store.
-   * @return {Object}
+   * @return {object}
    */
 
   load() {
@@ -265,6 +257,25 @@ class Store extends Emitter {
     }
   }
 
+  /**
+   * Get and set the `store.data` object that is used for storing values.
+   * This object is persisted to the file system.
+   */
+
+  set data(val) {
+    this._data = val;
+    this.save();
+  }
+  get data() {
+    return this._data || (this._data = this.load());
+  }
+
+  /**
+   * Convenience getter for `Object.keys(store.data)`.
+   * @return {array}
+   * @api public
+   */
+
   get keys() {
     return Object.keys(this.data);
   }
@@ -275,23 +286,32 @@ class Store extends Emitter {
  */
 
 function mkdirSync(dirname, options = {}) {
-  assert.equal(typeof dirname, 'string', 'expected a string');
-  const opts = Object.assign({ cwd: process.cwd() }, options);
+  assert.equal(typeof dirname, 'string', 'expected dirname to be a string');
+  const opts = Object.assign({ cwd: process.cwd(), fs }, options);
   const segs = path.relative(opts.cwd, dirname).split(path.sep);
+  const make = dir => fs.mkdirSync(dir, mode(opts));
   for (let i = 0; i <= segs.length; i++) {
     try {
-      fs.mkdirSync(path.join(opts.cwd, ...segs.slice(0, i)), mode(opts));
+      make((dirname = path.join(opts.cwd, ...segs.slice(0, i))));
     } catch (err) {
-      if (err.code !== 'EEXIST') {
-        throw err;
-      }
+      handleError(dirname, opts)(err);
     }
   }
   return dirname;
 }
 
+function handleError(dir, opts = {}) {
+  return (err) => {
+    if (err.code !== 'EEXIST' || path.dirname(dir) === dir || !opts.fs.statSync(dir).isDirectory()) {
+      throw err;
+    }
+  };
+}
+
 function get(obj = {}, prop = '') {
-  return obj[prop] || split(prop).reduce((acc, k) => acc && acc[strip(k)], obj);
+  return obj[prop] == null
+    ? split(prop).reduce((acc, k) => acc && acc[strip(k)], obj)
+    : obj[prop];
 }
 
 function set(obj = {}, prop = '', val) {
@@ -300,19 +320,33 @@ function set(obj = {}, prop = '', val) {
   }, obj);
 }
 
-function hasOwn(obj = {}, prop = '') {
+function del(obj = {}, prop = '') {
   if (!prop) return false;
-  if (obj.hasOwnProperty(prop)) return true;
-  if (prop.indexOf('.') === -1) {
-    return obj.hasOwnProperty(prop);
+  if (obj.hasOwnProperty(prop)) {
+    delete obj[prop];
+    return true;
   }
   const segs = split(prop);
   const last = segs.pop();
-  const val = get(obj, segs.join('.'));
-  if (val && typeof val === 'object') {
-    return val.hasOwnProperty(last);
+  const val = segs.length ? get(obj, segs.join('.')) : obj;
+  if (isObject(val) && val.hasOwnProperty(last)) {
+    delete val[last];
+    return true;
   }
-  return false;
+}
+
+function hasOwn(obj = {}, prop = '') {
+  if (!prop) return false;
+  if (obj.hasOwnProperty(prop)) return true;
+  if (prop.indexOf('.') === -1) return false;
+  const segs = split(prop);
+  const last = segs.pop();
+  const val = segs.length ? get(obj, segs.join('.')) : obj;
+  return isObject(val) && val.hasOwnProperty(last);
+}
+
+function isObject(val) {
+  return val && typeof val === 'object';
 }
 
 /**

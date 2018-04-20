@@ -7,11 +7,12 @@ const del = require('delete');
 const assert = require('assert');
 const Store = require('..');
 const tests = (...args) => path.resolve(__dirname, ...args);
+const storePath = tests('fixtures/tests.json');
 let store;
 
 describe('store', function() {
   beforeEach(function() {
-    store = new Store('abc', { base: tests() });
+    store = new Store({ name: 'abc', path: storePath });
   });
 
   afterEach(function() {
@@ -30,20 +31,15 @@ describe('store', function() {
       assert.equal(store.data.foo, 'bar');
     });
 
-    // it.only('should create a store at the given `base`', function() {
-    //   store = new Store('abc', { base: tests('actual') });
-
-    //   store.set('foo', 'bar');
-    //   assert.equal(path.basename(store.path), 'abc.json');
-    //   assert.equal(store.path, tests('actual/abc.json'));
-    //   assert(store.data.hasOwnProperty('foo'));
-    //   assert.equal(store.data.foo, 'bar');
-    //   console.log(store.path)
-    //   assert.equal(fs.existsSync(tests('actual/abc.json')), true);
-    // });
+    it('should initialize a store with the given defaults', function() {
+      const defaults = { foo: 'bar', baz: 'qux' };
+      store = new Store('abc', { base: storePath }, defaults);
+      assert.equal(store.get('foo'), 'bar');
+      assert.equal(store.get('baz'), 'qux');
+    });
 
     it('should create a store using the given `indent` value', function() {
-      store = new Store('abc', { base: tests('actual'), indent: 0 });
+      store = new Store('abc', { base: storePath, indent: 0 });
       store.set('foo', 'bar');
       const contents = fs.readFileSync(store.path, 'utf8');
       assert.equal(contents, '{"foo":"bar"}');
@@ -51,7 +47,7 @@ describe('store', function() {
   });
 
   describe('set', function() {
-    it('should `.set()` a value on the store', function() {
+    it('should `.set()` a value', function() {
       store.set('one', 'two');
       assert.equal(store.data.one, 'two');
     });
@@ -76,12 +72,12 @@ describe('store', function() {
   });
 
   describe('union', function() {
-    it('should `.union()` a value on the store', function() {
+    it('should add and arrayify a new value', function() {
       store.union('one', 'two');
       assert.deepEqual(store.data.one, ['two']);
     });
 
-    it('should not union duplicate values', function() {
+    it('should uniquify duplicate values', function() {
       store.union('one', 'two');
       assert.deepEqual(store.data.one, ['two']);
 
@@ -89,7 +85,7 @@ describe('store', function() {
       assert.deepEqual(store.data.one, ['two']);
     });
 
-    it('should concat an existing array:', function() {
+    it('should union an existing value', function() {
       store.union('one', 'a');
       assert.deepEqual(store.data.one, ['a']);
 
@@ -102,7 +98,7 @@ describe('store', function() {
   });
 
   describe('has', function() {
-    it('should return true if a key `.has()` on the store', function() {
+    it('should return true if a key has a value', function() {
       store.set('foo', 'bar');
       store.set('baz', null);
       store.set('qux', undefined);
@@ -113,7 +109,7 @@ describe('store', function() {
       assert(!store.has('qux'));
     });
 
-    it('should return true if a nested key `.has()` on the store', function() {
+    it('should return true if a nested key has a value', function() {
       store.set('a.b.c.d', { x: 'zzz' });
       store.set('a.b.c.e', { f: null });
       store.set('a.b.g.j', { k: undefined });
@@ -133,13 +129,13 @@ describe('store', function() {
   });
 
   describe('hasOwn', function() {
-    it('should return true if a key exists on the store', function() {
+    it('should return true if a key exists', function() {
       store.set('foo', 'bar');
       store.set('baz', null);
       store.set('qux', undefined);
 
-      assert(store.hasOwn('foo'));
       assert(!store.hasOwn('bar'));
+      assert(store.hasOwn('foo'));
       assert(store.hasOwn('baz'));
       assert(store.hasOwn('qux'));
     });
@@ -159,7 +155,7 @@ describe('store', function() {
       assert(store.hasOwn('foo\\.bar.baz\\.qux'));
     });
 
-    it('should return true if a nested key exists `.hasOwn()` on the store', function() {
+    it('should return true if a nested key exists', function() {
       store.set('a.b.c.d', { x: 'zzz' });
       store.set('a.b.c.e', { f: null });
       store.set('a.b.g.j', { k: undefined });
@@ -205,6 +201,36 @@ describe('store', function() {
       assert(!store.data.hasOwnProperty('a'));
       assert(!store.data.hasOwnProperty('c'));
     });
+  });
+
+  describe('del', function() {
+    it('should delete stored values', function() {
+      store.set('a', 'b');
+      store.set('c', 'd');
+      store.set('e', 'f');
+      store.del('a');
+      store.del('c');
+      store.del('e');
+      assert.deepEqual(store.data, {});
+    });
+
+    it('should delete a nested stored value', function() {
+      store.set('a.b.c', 'b');
+      assert.deepEqual(store.data, { a: { b: { c: 'b' } } });
+      store.del('a.b.c');
+      assert.deepEqual(store.data, { a: { b: {} } });
+      store.del('a.b');
+      assert.deepEqual(store.data, { a: {} });
+      store.del('a');
+      assert.deepEqual(store.data, {});
+    });
+
+    it('should ignore nested properties that do not exist', function() {
+      store.set('a.b.c', 'b');
+      assert.deepEqual(store.data, { a: { b: { c: 'b' } } });
+      store.del('a.b.c.d');
+      assert.deepEqual(store.data, { a: { b: { c: 'b' } } });
+    });
 
     it('should delete multiple stored values', function() {
       store.set('a', 'b');
@@ -212,90 +238,6 @@ describe('store', function() {
       store.set('e', 'f');
       ['a', 'c', 'e'].forEach(v => store.del(v));
       assert.deepEqual(store.data, {});
-    });
-  });
-});
-
-describe('events', function() {
-  beforeEach(function() {
-    store = new Store('abc');
-  });
-
-  afterEach(function() {
-    store.data = {};
-  });
-
-  describe('set', function() {
-    it('should emit `set` when an object is set:', function() {
-      const keys = [];
-      store.on('set', function(key) {
-        keys.push(key);
-      });
-
-      store.set({ a: { b: { c: 'd' } } });
-      assert.deepEqual(keys, ['a']);
-    });
-
-    it('should emit `set` when a key/value pair is set:', function() {
-      const keys = [];
-
-      store.on('set', function(key) {
-        keys.push(key);
-      });
-
-      store.set('a', 'b');
-      assert.deepEqual(keys, ['a']);
-    });
-
-    it('should emit `set` when an object value is set:', function() {
-      const keys = [];
-
-      store.on('set', function(key) {
-        keys.push(key);
-      });
-
-      store.set('a', { b: 'c' });
-      assert.deepEqual(keys, ['a']);
-    });
-
-    it('should emit `set` when an array of objects is passed:', function() {
-      const keys = [];
-
-      store.on('set', function(key) {
-        keys.push(key);
-      });
-
-      store.set([{ a: 'b' }, { c: 'd' }]);
-      assert.deepEqual(keys, ['a', 'c']);
-    });
-  });
-
-  describe('del', function() {
-    it('should emit `del` when a value is delted:', function(cb) {
-      store.on('del', function(keys) {
-        assert.deepEqual(keys, 'a');
-        assert.equal(typeof store.get('a'), 'undefined');
-        cb();
-      });
-
-      store.set('a', { b: 'c' });
-      assert.deepEqual(store.get('a'), { b: 'c' });
-      store.del('a');
-    });
-
-    it('should emit deleted keys on `del`:', function(cb) {
-      const arr = [];
-
-      store.on('del', key => arr.push(key));
-      store.set('a', 'b');
-      store.set('c', 'd');
-      store.set('e', 'f');
-
-      store.del();
-
-      assert.deepEqual(arr, ['a', 'c', 'e']);
-      assert.equal(Object.keys(store.data).length, 0);
-      cb();
     });
   });
 });
