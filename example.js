@@ -1,20 +1,16 @@
 // default cwd is `~/data-store/`
 const Store = require('./');
-const store = new Store('app', { cwd: 'test/actual' });
+const store = new Store('app', { path: 'test/actual/data.json' });
 
 store.set('a', 'b');
 store.set({ c: 'd' });
-store.set('e.f', 'g')
+store.set('e.f.g', 'zzz')
 
 console.log(store.get('e.f'));
-//=> 'g'
+//=> { g: 'zzz' }
 
-console.log(store.get());
-//=> { name: 'app', data: { a: 'b', c: 'd', e: { f: 'g' } } }
 
 console.log(store.data);
-//=> { a: 'b', c: 'd', e: { f: 'g' } }
+//=> { a: 'b', c: 'd', e: { f: { g: 'zzz' } } }
 
-console.log(store.keys)
-
-console.log(store.clear())
+// console.log(store.clear())

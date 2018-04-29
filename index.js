@@ -6,29 +6,21 @@ const path = require('path');
 const assert = require('assert');
 const flatten = (...args) => [].concat.apply([], args);
 const unique = arr => arr.filter((v, i) => arr.indexOf(v) === i);
-const mode = opts => opts.mode || (parseInt('0777', 8) & ~process.umask());
-const strip = str => str.replace(/\\(?=\.)/g, '');
-const split = str => str.split(/(?<!\\)\./).map(strip);
-const env = process.env;
 
 /**
- * Initialize a new `Store` with the given `name`
- * and `options`.
+ * Initialize a new `Store` with the given `name`, `options` and `default` data.
  *
  * ```js
  * const store = require('data-store')('abc');
  * //=> '~/data-store/a.json'
  *
- * const store = require('data-store')('abc', {
- *   cwd: 'test/fixtures'
- * });
+ * const store = require('data-store')('abc', { cwd: 'test/fixtures' });
  * //=> './test/fixtures/abc.json'
  * ```
- *
+ * @name Store
  * @param {string} `name` Store name to use for the basename of the `.json` file.
- * @param {object} `options`
- * @param {string} `options.cwd` Current working directory for storage. If not defined, the user home directory is used, based on OS. This is the only option currently, other may be added in the future.
- * @param {number} `options.indent` Number passed to `JSON.stringify` when saving the data. Defaults to `2` if `null` or `undefined`
+ * @param {object} `options` See all [available options](#options).
+ * @param {object} `defaults` An object to initialize the store with.
  * @api public
  */
 
@@ -40,13 +32,13 @@ class Store {
       name = options.name;
     }
 
-    assert.equal(typeof name, 'string', 'expected name to be a string');
+    assert.equal(typeof name, 'string', 'expected store name to be a string');
     this.name = name;
     this.options = options;
+    this.delay = this.options.delay;
     this.indent = this.options.indent != null ? this.options.indent : 2;
-    this.folder = this.options.folder || '.config';
-    this.home = this.options.home || env.XDG_CONFIG_HOME || os.homedir();
-    this.base = path.join(this.home, this.folder, 'data-store');
+    this.home = this.options.home || process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    this.base = path.join(this.home, 'data-store');
     this.path = this.options.path || path.join(this.base, this.name + '.json');
     this.data = Object.assign({}, defaults, this.data);
   }
@@ -72,14 +64,12 @@ class Store {
    */
 
   set(key, val) {
-    if (typeof key !== 'string') {
-      for (const k of Array.isArray(key) ? key : Object.keys(key)) {
-        this.set(k, key[k]);
-      }
-      return this;
+    if (isObject(key)) {
+      Object.assign(this.data, key);
+    } else {
+      assert.equal(typeof key, 'string', 'expected key to be a string');
+      set(this.data, key, val);
     }
-    assert.equal(typeof key, 'string', 'expected key to be a string');
-    set(this.data, key, val);
     this.save();
     return this;
   }
@@ -123,7 +113,6 @@ class Store {
    * store.get();
    * //=> {b: 'c'}
    * ```
-   *
    * @name .get
    * @param {string} `key`
    * @return {any} The value to store for `key`.
@@ -131,7 +120,8 @@ class Store {
    */
 
   get(key) {
-    return key ? get(this.data, key) : Object.assign({}, this.data);
+    assert.equal(typeof key, 'string', 'expected key to be a string');
+    return get(this.data, key);
   }
 
   /**
@@ -173,7 +163,7 @@ class Store {
    * store.hasOwn('e'); //=> true
    * store.hasOwn('foo'); //=> false
    * ```
-   *
+   * @name .hasOwn
    * @param {string} `key`
    * @return {boolean} Returns true if `key` exists
    * @api public
@@ -195,6 +185,7 @@ class Store {
    * store.del('foo');
    * console.log(store.data); //=> {}
    * ```
+   * @name .del
    * @param {string|Array} `keys` One or more properties to delete.
    * @api public
    */
@@ -212,24 +203,41 @@ class Store {
   }
 
   /**
-   * Reset the store to an empty object.
+   * Return a clone of the `store.data` object.
+   *
+   * ```js
+   * console.log(store.clone());
+   * ```
+   * @name .clone
+   * @return {object}
+   * @api public
+   */
+
+  clone() {
+    return cloneDeep(this.data);
+  }
+
+  /**
+   * Reset `store.data` to an empty object.
    *
    * ```js
    * store.clear();
    * ```
-   *
+   * @name .clear
+   * @return {object} Returns the store instance.
    * @api public
    */
 
   clear() {
     this.data = {};
-    this.save();
     return this;
   }
 
   /**
-   * Stringify the store
+   * Stringify the store.
+   * @name .json
    * @return {string}
+   * @api public
    */
 
   json(replacer = null, space = this.indent) {
@@ -242,8 +250,23 @@ class Store {
    */
 
   save() {
-    mkdirSync(path.dirname(this.path), this.options.mkdir);
-    fs.writeFileSync(this.path, this.json(), { mode: 0o0600 });
+    if (!this.saved) {
+      this.saved = true;
+      mkdirSync(path.dirname(this.path), this.options.mkdir);
+    }
+
+    const write = () => {
+      if (this.debounce) this.debounce.clear();
+      fs.writeFileSync(this.path, this.json(), { mode: 0o0600 });
+    };
+
+    if (typeof this.delay !== 'number') {
+      write();
+      return this;
+    }
+
+    if (this.debounce) this.debounce.clear();
+    this.debounce = debounce(write, this.delay);
     return this;
   }
 
@@ -254,6 +277,10 @@ class Store {
 
   load() {
     try {
+      if (this.debounce) {
+        this.debounce.clear();
+        return this.data;
+      }
       return JSON.parse(fs.readFileSync(this.path));
     } catch (err) {
       if (err.code === 'EACCES') {
@@ -261,8 +288,7 @@ class Store {
         throw err;
       }
       if (err.code === 'ENOENT' || err.name === 'SyntaxError') {
-        this.data = {};
-        return {};
+        return (this.data = {});
       }
     }
   }
@@ -276,6 +302,7 @@ class Store {
    * store.data.foo = 'bar';
    * console.log(store.get('foo')); //=> 'bar'
    * ```
+   * @name .data
    * @return {object}
    */
 
@@ -287,6 +314,14 @@ class Store {
     return this._data || (this._data = this.load());
   }
 }
+
+/**
+ * Utils
+ */
+
+const mode = opts => opts.mode || 0o777 & ~process.umask();
+const strip = str => str.replace(/\\(?=\.)/g, '');
+const split = str => str.split(/(?<!\\)\./).map(strip);
 
 /**
  * Create a directory and any intermediate directories that might exist.
@@ -315,45 +350,84 @@ function handleError(dir, opts = {}) {
   };
 }
 
-function get(obj = {}, prop = '') {
-  return obj[prop] == null
-    ? split(prop).reduce((acc, k) => acc && acc[strip(k)], obj)
-    : obj[prop];
+function get(data = {}, prop = '') {
+  return data[prop] == null
+    ? split(prop).reduce((acc, k) => acc && acc[strip(k)], data)
+    : data[prop];
 }
 
-function set(obj = {}, prop = '', val) {
+function set(data = {}, prop = '', val) {
   return split(prop).reduce((acc, k, i, arr) => {
-    return (acc[k] = arr.length - 1 > i ? (acc[k] || {}) : val);
-  }, obj);
+    let value = arr.length - 1 > i ? (acc[k] || {}) : val;
+    if (!isObject(value) && i < arr.length - 1) value = {};
+    return (acc[k] = value);
+  }, data);
 }
 
-function del(obj = {}, prop = '') {
+function del(data = {}, prop = '') {
   if (!prop) return false;
-  if (obj.hasOwnProperty(prop)) {
-    delete obj[prop];
+  if (data.hasOwnProperty(prop)) {
+    delete data[prop];
     return true;
   }
   const segs = split(prop);
   const last = segs.pop();
-  const val = segs.length ? get(obj, segs.join('.')) : obj;
+  const val = segs.length ? get(data, segs.join('.')) : data;
   if (isObject(val) && val.hasOwnProperty(last)) {
     delete val[last];
     return true;
   }
 }
 
-function hasOwn(obj = {}, prop = '') {
+function hasOwn(data = {}, prop = '') {
   if (!prop) return false;
-  if (obj.hasOwnProperty(prop)) return true;
+  if (data.hasOwnProperty(prop)) return true;
   if (prop.indexOf('.') === -1) return false;
   const segs = split(prop);
   const last = segs.pop();
-  const val = segs.length ? get(obj, segs.join('.')) : obj;
+  const val = segs.length ? get(data, segs.join('.')) : data;
   return isObject(val) && val.hasOwnProperty(last);
 }
 
 function isObject(val) {
-  return val && typeof val === 'object';
+  return typeOf(val) === 'object';
+}
+
+/**
+ * Deeply clone plain objects and arrays.
+ */
+
+function cloneDeep(value) {
+  switch (typeOf(value)) {
+    case 'object':
+      const obj = {};
+      for (const key of Object.keys(value)) {
+        obj[key] = cloneDeep(value[key]);
+      }
+      return obj;
+    case 'array':
+      return value.map(ele => cloneDeep(ele));
+    default: {
+      return value;
+    }
+  }
+}
+
+function typeOf(val) {
+  if (typeof val === 'string') return 'string';
+  if (Array.isArray(val)) return 'array';
+  if (val instanceof RegExp) {
+    return 'regexp';
+  }
+  if (val && typeof val === 'object') {
+    return 'object';
+  }
+}
+
+function debounce(fn, delay) {
+  const timeout = setTimeout(fn, delay);
+  timeout.clear = () => clearTimeout(timeout);
+  return timeout;
 }
 
 /**

@@ -1,6 +1,6 @@
 {
   "name": "data-store",
-  "description": "Easily get, set and persist config data.",
+  "description": "Easily persist and load config data.",
   "version": "1.0.0",
   "homepage": "https://github.com/jonschlinkert/data-store",
   "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
@@ -20,7 +20,7 @@
   ],
   "main": "index.js",
   "engines": {
-    "node": ">=4"
+    "node": ">=8"
   },
   "scripts": {
     "test": "mocha"
@@ -76,8 +76,5 @@
     "lint": {
       "reflinks": true
     }
-  },
-  "dependencies": {
-    "strip-comments": "^1.0.1"
   }
 }

@@ -41,8 +41,7 @@ describe('store', function() {
     it('should create a store using the given `indent` value', function() {
       store = new Store('abc', { base: storePath, indent: 0 });
       store.set('foo', 'bar');
-      const contents = fs.readFileSync(store.path, 'utf8');
-      assert.equal(contents, '{"foo":"bar"}');
+      assert.deepEqual(store.load(), { foo: 'bar' });
     });
   });
 
