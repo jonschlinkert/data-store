@@ -15,9 +15,10 @@ describe('store', function() {
     store = new Store({ name: 'abc', path: storePath });
   });
 
-  afterEach(function() {
+  afterEach(async function() {
     store.data = {};
-    return del(tests('actual'));
+    await del(tests('actual'));
+    await del(store.path);
   });
 
   describe('create', function() {
@@ -33,17 +34,25 @@ describe('store', function() {
 
     it('should initialize a store with the given defaults', function() {
       const defaults = { foo: 'bar', baz: 'qux' };
-      store = new Store('abc', { base: storePath }, defaults);
+      store = new Store('abc', { path: storePath }, defaults);
       assert.equal(store.get('foo'), 'bar');
       assert.equal(store.get('baz'), 'qux');
     });
-
-    it('should create a store using the given `indent` value', function() {
-      store = new Store('abc', { base: storePath, indent: 0 });
-      store.set('foo', 'bar');
-      assert.deepEqual(store.load(), { foo: 'bar' });
-    });
   });
+
+  // describe('debounce', function() {
+  //   it('should delay saving', function(cb) {
+  //     store = new Store('abc', { path: storePath, indent: 0, delay: 1 });
+  //     store.set('foo', 'bar');
+
+  //     assert.equal(store.get('foo'), 'bar');
+
+  //     setTimeout(() => {
+  //       assert.deepEqual(JSON.parse(fs.readFileSync(store.path)), { foo: 'bar' });
+  //       cb();
+  //     }, 10);
+  //   });
+  // });
 
   describe('set', function() {
     it('should `.set()` a value', function() {
@@ -237,6 +246,14 @@ describe('store', function() {
       store.set('e', 'f');
       ['a', 'c', 'e'].forEach(v => store.del(v));
       assert.deepEqual(store.data, {});
+    });
+  });
+
+  describe('json', function() {
+    it('should use the indent value defined on ctor options', function() {
+      store = new Store('abc', { path: storePath, indent: 0 });
+      store.set('foo', 'bar');
+      assert.equal(store.json(), '{"foo":"bar"}')
     });
   });
 });

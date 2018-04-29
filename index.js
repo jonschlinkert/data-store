@@ -3,9 +3,11 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const util = require('util');
 const assert = require('assert');
 const flatten = (...args) => [].concat.apply([], args);
 const unique = arr => arr.filter((v, i) => arr.indexOf(v) === i);
+const unlink = util.promisify(fs.unlink);
 
 /**
  * Initialize a new `Store` with the given `name`, `options` and `default` data.
@@ -33,14 +35,16 @@ class Store {
     }
 
     assert.equal(typeof name, 'string', 'expected store name to be a string');
+    const { delay = 5, indent = 2, home, base } = options;
     this.name = name;
     this.options = options;
-    this.delay = this.options.delay;
-    this.indent = this.options.indent != null ? this.options.indent : 2;
-    this.home = this.options.home || process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
-    this.base = path.join(this.home, 'data-store');
+    this.defaults = defaults || options.default;
+    this.indent = indent;
+    this.delay = delay;
+    this.home = home || process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    this.base = base || path.join(this.home, 'data-store');
     this.path = this.options.path || path.join(this.base, this.name + '.json');
-    this.data = Object.assign({}, defaults, this.data);
+    this._data = null;
   }
 
   /**
@@ -224,13 +228,12 @@ class Store {
    * store.clear();
    * ```
    * @name .clear
-   * @return {object} Returns the store instance.
+   * @return {undefined}
    * @api public
    */
 
   clear() {
     this.data = {};
-    return this;
   }
 
   /**
@@ -250,24 +253,42 @@ class Store {
    */
 
   save() {
-    if (!this.saved) {
-      this.saved = true;
-      mkdirSync(path.dirname(this.path), this.options.mkdir);
-    }
+    if (!this.delay) return this.writeFile();
+    if (this.save.debounce) return;
+    this.save.debounce = setTimeout(() => this.writeFile(), this.delay);
+  }
 
-    const write = () => {
-      if (this.debounce) this.debounce.clear();
-      fs.writeFileSync(this.path, this.json(), { mode: 0o0600 });
+  writeFile() {
+    if (this.save.debounce) {
+      clearTimeout(this.save.debounce);
+      this.save.debounce = null;
+    }
+    if (!this.saved) mkdirSync(path.dirname(this.path), this.options.mkdir);
+    this.saved = true;
+    fs.writeFileSync(this.path, this.json(), { mode: 0o0600 });
+  }
+
+  /**
+   * Delete the store from the file system.
+   * @return {object}
+   */
+
+  unlink() {
+    if (this.unlink.debounce) this.unlink.debounce();
+    this.unlink.wait = (this.unlink.wait || 0) + 1;
+
+    const timeout = setTimeout(async () => {
+      if (this.save.debounce) return this.unlink();
+      this.unlink.debounce = null;
+      this.unlink.wait = 0;
+      // tryUnlink(this.path);
+      await unlink(this.path);
+    }, this.unlink.wait);
+
+    this.unlink.debounce = () => {
+      this.unlink.debounce = null;
+      clearTimeout(timeout);
     };
-
-    if (typeof this.delay !== 'number') {
-      write();
-      return this;
-    }
-
-    if (this.debounce) this.debounce.clear();
-    this.debounce = debounce(write, this.delay);
-    return this;
   }
 
   /**
@@ -277,10 +298,6 @@ class Store {
 
   load() {
     try {
-      if (this.debounce) {
-        this.debounce.clear();
-        return this.data;
-      }
       return JSON.parse(fs.readFileSync(this.path));
     } catch (err) {
       if (err.code === 'EACCES') {
@@ -288,7 +305,8 @@ class Store {
         throw err;
       }
       if (err.code === 'ENOENT' || err.name === 'SyntaxError') {
-        return (this.data = {});
+        this._data = {};
+        return {};
       }
     }
   }
@@ -311,7 +329,11 @@ class Store {
     this.save();
   }
   get data() {
-    return this._data || (this._data = this.load());
+    this._data = this._data || this.load();
+    if (!this.saved) {
+      this._data = Object.assign({}, this.defaults, this._data);
+    }
+    return this._data;
   }
 }
 
@@ -393,14 +415,23 @@ function isObject(val) {
   return typeOf(val) === 'object';
 }
 
+function define(obj, key, val) {
+  Reflect.defineProperty(obj, key, {
+    enumerable: false,
+    writable: true,
+    configurable: true,
+    value: val
+  });
+}
+
 /**
  * Deeply clone plain objects and arrays.
  */
 
 function cloneDeep(value) {
+  const obj = {};
   switch (typeOf(value)) {
     case 'object':
-      const obj = {};
       for (const key of Object.keys(value)) {
         obj[key] = cloneDeep(value[key]);
       }
@@ -424,10 +455,10 @@ function typeOf(val) {
   }
 }
 
-function debounce(fn, delay) {
-  const timeout = setTimeout(fn, delay);
-  timeout.clear = () => clearTimeout(timeout);
-  return timeout;
+function tryUnlink(filepath) {
+  try {
+    fs.unlinkSync(filepath);
+  } catch (err) { /* ignore */ }
 }
 
 /**
