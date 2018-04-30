@@ -3,11 +3,9 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const util = require('util');
 const assert = require('assert');
 const flatten = (...args) => [].concat.apply([], args);
 const unique = arr => arr.filter((v, i) => arr.indexOf(v) === i);
-const unlink = util.promisify(fs.unlink);
 
 /**
  * Initialize a new `Store` with the given `name`, `options` and `default` data.
@@ -263,7 +261,7 @@ class Store {
       clearTimeout(this.save.debounce);
       this.save.debounce = null;
     }
-    if (!this.saved) mkdirSync(path.dirname(this.path), this.options.mkdir);
+    if (!this.saved) mkdir(path.dirname(this.path), this.options.mkdir);
     this.saved = true;
     fs.writeFileSync(this.path, this.json(), { mode: 0o0600 });
   }
@@ -274,21 +272,27 @@ class Store {
    */
 
   unlink() {
-    if (this.unlink.debounce) this.unlink.debounce();
-    this.unlink.wait = (this.unlink.wait || 0) + 1;
+    let timeout = null;
+    let wait = 0;
 
-    const timeout = setTimeout(async () => {
-      if (this.save.debounce) return this.unlink();
-      this.unlink.debounce = null;
-      this.unlink.wait = 0;
-      // tryUnlink(this.path);
-      await unlink(this.path);
-    }, this.unlink.wait);
+    if (this.unlink.clear) this.unlink.clear();
+    const clear = () => clearTimeout(timeout);
 
-    this.unlink.debounce = () => {
-      this.unlink.debounce = null;
-      clearTimeout(timeout);
+    const debounce = () => {
+      clear();
+      wait++;
+
+      timeout = setTimeout(() => {
+        if (this.save.debounce) {
+          debounce();
+        } else {
+          tryUnlink(this.path);
+        }
+      }, wait);
     };
+
+    this.unlink.clear = clear;
+    debounce();
   }
 
   /**
@@ -349,7 +353,7 @@ const split = str => str.split(/(?<!\\)\./).map(strip);
  * Create a directory and any intermediate directories that might exist.
  */
 
-function mkdirSync(dirname, options = {}) {
+function mkdir(dirname, options = {}) {
   assert.equal(typeof dirname, 'string', 'expected dirname to be a string');
   const opts = Object.assign({ cwd: process.cwd(), fs }, options);
   const segs = path.relative(opts.cwd, dirname).split(path.sep);
@@ -370,6 +374,16 @@ function handleError(dir, opts = {}) {
       throw err;
     }
   };
+}
+
+function tryUnlink(filepath) {
+  try {
+    fs.unlinkSync(filepath);
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
 }
 
 function get(data = {}, prop = '') {
@@ -415,15 +429,6 @@ function isObject(val) {
   return typeOf(val) === 'object';
 }
 
-function define(obj, key, val) {
-  Reflect.defineProperty(obj, key, {
-    enumerable: false,
-    writable: true,
-    configurable: true,
-    value: val
-  });
-}
-
 /**
  * Deeply clone plain objects and arrays.
  */
@@ -453,12 +458,6 @@ function typeOf(val) {
   if (val && typeof val === 'object') {
     return 'object';
   }
-}
-
-function tryUnlink(filepath) {
-  try {
-    fs.unlinkSync(filepath);
-  } catch (err) { /* ignore */ }
 }
 
 /**

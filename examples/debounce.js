@@ -16,9 +16,12 @@ const store = new Store('app', { path: __dirname + '/debounce.json', delay: 10 }
   store.set('c', 'd');
   store.set('c', 'd');
   store.set('c', 'd');
+  const int = setInterval(function() {
+    console.log(store.data);
+    console.log(store.unlink);
+  }, 10);
+
   store.unlink();
-  console.log(store.data);
-  console.log(store);
 
   return new Promise(resolve => {
     setTimeout(() => {
@@ -28,8 +31,8 @@ const store = new Store('app', { path: __dirname + '/debounce.json', delay: 10 }
       store.set('e', 'f');
       store.set('e', 'f');
       store.set('e', 'f');
-      console.log(store.data);
       store.unlink();
+      clearInterval(int);
       resolve();
     }, 200);
   });
