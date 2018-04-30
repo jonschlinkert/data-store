@@ -77,20 +77,20 @@ class Store {
   }
 
   /**
-   * Get the stored `value` of `key`, or return the entire store
-   * if no `key` is defined.
+   * Union the `value` to the array at `key`. Creates a new array if one doesn't exist.
    *
    * ```js
-   * store.set('a', {b: 'c'});
-   * store.get('a');
-   * //=> {b: 'c'}
-   *
-   * store.get();
-   * //=> {b: 'c'}
+   * store.union('a', 'b');
+   * store.union('a', 'c');
+   * store.union('a', 'd');
+   * store.union('a', 'c');
+   * console.log(store.get('a'));
+   * //=> ['b', 'c', 'd']
    * ```
    * @name .union
-   * @param {string} `key`
-   * @return {any} The value to store for `key`.
+   * @param  {string} `key`
+   * @param  {any} `val` The value to union to `key`. Must be a valid JSON type: String, Number, Array or Object.
+   * @return {object} `Store` for chaining
    * @api public
    */
 
@@ -113,7 +113,7 @@ class Store {
    * //=> {b: 'c'}
    *
    * store.get();
-   * //=> {b: 'c'}
+   * //=> {a: {b: 'c'}}
    * ```
    * @name .get
    * @param {string} `key`
