@@ -3,7 +3,7 @@
 (async function(argument) {
 
 const Store = require('../');
-const store = new Store('app', { path: __dirname + '/debounce.json', delay: 10 });
+const store = new Store('app', { path: __dirname + '/debounce.json', debounce: 5 });
   store.set('a', 'b');
   store.set('c', 'd');
   store.set('c', 'd');
@@ -16,10 +16,11 @@ const store = new Store('app', { path: __dirname + '/debounce.json', delay: 10 }
   store.set('c', 'd');
   store.set('c', 'd');
   store.set('c', 'd');
+
   const int = setInterval(function() {
     console.log(store.data);
     console.log(store.unlink);
-  }, 10);
+  }, 9);
 
   store.unlink();
 
@@ -31,9 +32,10 @@ const store = new Store('app', { path: __dirname + '/debounce.json', delay: 10 }
       store.set('e', 'f');
       store.set('e', 'f');
       store.set('e', 'f');
+
       store.unlink();
       clearInterval(int);
       resolve();
-    }, 200);
+    }, 100);
   });
 })();

@@ -33,12 +33,12 @@ class Store {
     }
 
     assert.equal(typeof name, 'string', 'expected store name to be a string');
-    const { delay = 5, indent = 2, home, base } = options;
+    const { debounce = 5, indent = 2, home, base } = options;
     this.name = name;
     this.options = options;
     this.defaults = defaults || options.default;
     this.indent = indent;
-    this.delay = delay;
+    this.debounce = debounce;
     this.home = home || process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
     this.base = base || path.join(this.home, 'data-store');
     this.path = this.options.path || path.join(this.base, this.name + '.json');
@@ -46,7 +46,7 @@ class Store {
   }
 
   /**
-   * Assign `value` to `key` and save to disk. Can be a key-value pair,
+   * Assign `value` to `key` and save to the file system. Can be a key-value pair,
    * array of objects, or an object.
    *
    * ```js
@@ -77,7 +77,8 @@ class Store {
   }
 
   /**
-   * Union the `value` to the array at `key`. Creates a new array if one doesn't exist.
+   * Add the given `value` to the array at `key`. Creates a new array if one
+   * doesn't exist, and only adds unique values to the array.
    *
    * ```js
    * store.union('a', 'b');
@@ -104,8 +105,7 @@ class Store {
   }
 
   /**
-   * Get the stored `value` of `key`, or return the entire store
-   * if no `key` is defined.
+   * Get the stored `value` of `key`.
    *
    * ```js
    * store.set('a', {b: 'c'});
@@ -235,7 +235,11 @@ class Store {
   }
 
   /**
-   * Stringify the store.
+   * Stringify the store. Takes the same arguments as `JSON.stringify`.
+   *
+   * ```js
+   * console.log(store.json(null, 2));
+   * ```
    * @name .json
    * @return {string}
    * @api public
@@ -246,15 +250,65 @@ class Store {
   }
 
   /**
-   * Persist the store to the file system.
-   * @return {object}
+   * Calls [.writeFile()](#writefile) to persist the store to the file system,
+   * after an optional [debounce](#options) period. This method should probably
+   * not be called directly as it's used internally by other methods.
+   *
+   * ```js
+   * store.save();
+   * ```
+   * @name .save
+   * @return {undefined}
+   * @api public
    */
 
   save() {
-    if (!this.delay) return this.writeFile();
+    if (!this.debounce) return this.writeFile();
     if (this.save.debounce) return;
-    this.save.debounce = setTimeout(() => this.writeFile(), this.delay);
+    this.save.debounce = setTimeout(() => this.writeFile(), this.debounce);
   }
+
+  /**
+   * Delete the store from the file system.
+   *
+   * ```js
+   * store.unlink();
+   * ```
+   * @name .unlink
+   * @return {undefined}
+   * @api public
+   */
+
+  unlink() {
+    let wait = 0;
+
+    if (this.unlink.clear) this.unlink.clear();
+
+    const debounce = () => {
+      const timeout = setTimeout(() => {
+        if (this.save.debounce) {
+          debounce();
+        } else {
+          this.deleteFile();
+        }
+      }, wait++);
+      return () => clearTimeout(timeout);
+    };
+
+    this.unlink.clear = debounce();
+  }
+
+  /**
+   * Immediately write the store to the file system. This method should probably
+   * not be called directly. Unless you are familiar with the inner workings of
+   * the code it's recommended that you use .save() instead.
+   *
+   * ```js
+   * store.writeFile();
+   * ```
+   * @name .writeFile
+   * @return {undefined}
+   */
 
   writeFile() {
     if (this.save.debounce) {
@@ -267,32 +321,20 @@ class Store {
   }
 
   /**
-   * Delete the store from the file system.
-   * @return {object}
+   * Immediately delete the store from the file system. This method should probably
+   * not be called directly. Unless you are familiar with the inner workings of
+   * the code, it's recommended that you use .unlink() instead.
+   *
+   * ```js
+   * store.deleteFile();
+   * ```
+   * @name .deleteFile
+   * @return {undefined}
    */
 
-  unlink() {
-    let timeout = null;
-    let wait = 0;
-
+  deleteFile() {
     if (this.unlink.clear) this.unlink.clear();
-    const clear = () => clearTimeout(timeout);
-
-    const debounce = () => {
-      clear();
-      wait++;
-
-      timeout = setTimeout(() => {
-        if (this.save.debounce) {
-          debounce();
-        } else {
-          tryUnlink(this.path);
-        }
-      }, wait);
-    };
-
-    this.unlink.clear = clear;
-    debounce();
+    tryUnlink(this.path);
   }
 
   /**

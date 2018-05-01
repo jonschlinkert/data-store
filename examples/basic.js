@@ -1,5 +1,5 @@
 const Store = require('../');
-const store = new Store('app', { path: __dirname + '/basic.json', delay: 10 });
+const store = new Store('app', { path: __dirname + '/basic.json', debounce: 10 });
 
 store.set('a', 'b');
 store.set({ c: 'd' });

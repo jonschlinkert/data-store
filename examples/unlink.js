@@ -1,6 +1,6 @@
 const fs = require('fs');
 const Store = require('../');
-const store = new Store('app', { path: __dirname + '/basic.json', delay: 10 });
+const store = new Store('app', { path: __dirname + '/basic.json', debounce: false });
 
 store.set('a', 'b');
 store.set({ c: 'd' });
@@ -12,13 +12,17 @@ console.log(store.get('e.f'));
 console.log(store.data);
 //=> { a: 'b', c: 'd', e: { f: { g: 'zzz' } } }
 
-console.log(store.clear())
+store.clear();
 console.log(store.data);
 //=> {}
 
 console.log(fs.existsSync(store.path));
-// store.unlink();
 
 setTimeout(function() {
+  store.unlink();
   console.log(fs.existsSync(store.path));
+
+  setTimeout(function() {
+    console.log(fs.existsSync(store.path));
+  }, store.delay + 5);
 }, store.delay + 5);
