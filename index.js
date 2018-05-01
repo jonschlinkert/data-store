@@ -344,7 +344,7 @@ class Store {
 
   load() {
     try {
-      return JSON.parse(fs.readFileSync(this.path));
+      return (this._data = JSON.parse(fs.readFileSync(this.path)));
     } catch (err) {
       if (err.code === 'EACCES') {
         err.message += '\ndata-store does not have permission to load this file\n';
