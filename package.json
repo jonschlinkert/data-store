@@ -1,6 +1,6 @@
 {
   "name": "data-store",
-  "description": "Easily persist and load config data.",
+  "description": "Easily persist and load config data. No dependencies.",
   "version": "1.0.0",
   "homepage": "https://github.com/jonschlinkert/data-store",
   "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
@@ -66,11 +66,10 @@
     ],
     "related": {
       "list": [
-        "base",
-        "cache-base",
         "get-value",
         "has-value",
-        "set-value"
+        "set-value",
+        "write"
       ]
     },
     "lint": {

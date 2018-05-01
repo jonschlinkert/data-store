@@ -1,6 +1,6 @@
 # data-store [![NPM version](https://img.shields.io/npm/v/data-store.svg?style=flat)](https://www.npmjs.com/package/data-store) [![NPM monthly downloads](https://img.shields.io/npm/dm/data-store.svg?style=flat)](https://npmjs.org/package/data-store) [![NPM total downloads](https://img.shields.io/npm/dt/data-store.svg?style=flat)](https://npmjs.org/package/data-store) [![Linux Build Status](https://img.shields.io/travis/jonschlinkert/data-store.svg?style=flat&label=Travis)](https://travis-ci.org/jonschlinkert/data-store)
 
-> Easily persist and load config data.
+> Easily persist and load config data. No dependencies.
 
 Please consider following this project's author, [Jon Schlinkert](https://github.com/jonschlinkert), and consider starring the project to show your :heart: and support.
 
@@ -66,9 +66,9 @@ const store = require('data-store')('abc', { cwd: 'test/fixtures' });
 //=> './test/fixtures/abc.json'
 ```
 
-### [.set](index.js#L66)
+### [.set](index.js#L68)
 
-Assign `value` to `key` and save to disk. Can be a key-value pair, array of objects, or an object.
+Assign `value` to `key` and save to the file system. Can be a key-value pair, array of objects, or an object.
 
 **Params**
 
@@ -88,9 +88,30 @@ store.set({a: 'b'});
 //=> {a: 'b'}
 ```
 
-### [.union](index.js#L95)
+### [.union](index.js#L98)
 
-Get the stored `value` of `key`, or return the entire store if no `key` is defined.
+Add the given `value` to the array at `key`. Creates a new array if one doesn't exist, and only adds unique values to the array.
+
+**Params**
+
+* `key` **{string}**
+* `val` **{any}**: The value to union to `key`. Must be a valid JSON type: String, Number, Array or Object.
+* `returns` **{object}** `Store`: for chaining
+
+**Example**
+
+```js
+store.union('a', 'b');
+store.union('a', 'c');
+store.union('a', 'd');
+store.union('a', 'c');
+console.log(store.get('a'));
+//=> ['b', 'c', 'd']
+```
+
+### [.get](index.js#L124)
+
+Get the stored `value` of `key`.
 
 **Params**
 
@@ -105,30 +126,10 @@ store.get('a');
 //=> {b: 'c'}
 
 store.get();
-//=> {b: 'c'}
+//=> {a: {b: 'c'}}
 ```
 
-### [.get](index.js#L122)
-
-Get the stored `value` of `key`, or return the entire store if no `key` is defined.
-
-**Params**
-
-* `key` **{string}**
-* `returns` **{any}**: The value to store for `key`.
-
-**Example**
-
-```js
-store.set('a', {b: 'c'});
-store.get('a');
-//=> {b: 'c'}
-
-store.get();
-//=> {b: 'c'}
-```
-
-### [.has](index.js#L144)
+### [.has](index.js#L146)
 
 Returns `true` if the specified `key` has a value.
 
@@ -148,7 +149,7 @@ store.has('c'); //=> true
 store.has('d'); //=> false
 ```
 
-### [.hasOwn](index.js#L172)
+### [.hasOwn](index.js#L174)
 
 Returns `true` if the specified `key` exists.
 
@@ -174,7 +175,7 @@ store.hasOwn('e'); //=> true
 store.hasOwn('foo'); //=> false
 ```
 
-### [.del](index.js#L193)
+### [.del](index.js#L195)
 
 Delete one or more properties from the store.
 
@@ -193,7 +194,7 @@ store.del('foo');
 console.log(store.data); //=> {}
 ```
 
-### [.clone](index.js#L216)
+### [.clone](index.js#L218)
 
 Return a clone of the `store.data` object.
 
@@ -205,11 +206,11 @@ Return a clone of the `store.data` object.
 console.log(store.clone());
 ```
 
-### [.clear](index.js#L231)
+### [.clear](index.js#L233)
 
 Reset `store.data` to an empty object.
 
-* `returns` **{object}**: Returns the store instance.
+* `returns` **{undefined}**
 
 **Example**
 
@@ -217,17 +218,47 @@ Reset `store.data` to an empty object.
 store.clear();
 ```
 
-### [.json](index.js#L243)
+### [.json](index.js#L248)
 
-Stringify the store.
+Stringify the store. Takes the same arguments as `JSON.stringify`.
 
 * `returns` **{string}**
+
+**Example**
+
+```js
+console.log(store.json(null, 2));
+```
+
+### [.save](index.js#L265)
+
+Calls [.writeFile()](#writefile) to persist the store to the file system, after an optional [debounce](#options) period. This method should probably not be called directly as it's used internally by other methods.
+
+* `returns` **{undefined}**
+
+**Example**
+
+```js
+store.save();
+```
+
+### [.unlink](index.js#L282)
+
+Delete the store from the file system.
+
+* `returns` **{undefined}**
+
+**Example**
+
+```js
+store.unlink();
+```
 
 ## Options
 
 | **Option** | **Type** | **Default** | **Description** | 
 | --- | --- | --- | --- |
-| `delay` | `number` | `undefined` | Milliseconds for debounce (timeout delay) when writing the JSON file to the fs. This can make the store more performant, but comes with the potential side effect that the config file will be outdated during the timeout. To get around this, use data-store's API to [(re-)load](#load) the file, instead of directly reading the file (using `fs.readFile` for example). |
+| `debounce` | `number` | `undefined` | Milliseconds to delay writing the JSON file to the file system. This can make the store more performant by preventing multiple subsequent writes after calling `.set` or setting/getting `store.data`, but comes with the potential side effect that the config file will be outdated during the timeout. To get around this, use data-store's API to [(re-)load](#load) the file instead of directly reading the file (using `fs.readFile` for example). |
 | `indent` | `number | null` | `2` | The indent value to pass to `JSON.stringify()` when writing the file to the fs, or when [.json()](#json) is called |
 | `name` | `string` | `undefined` | The name to use for the store file stem (`name + '.json'` is the store's file name) |
 | `home` | `string` | `process.env.XDG_CONFIG_HOME` or `path.join(os.homedir(), '.config')` | The root home directory to use |
@@ -271,11 +302,10 @@ $ npm install -g verbose/verb#dev verb-generate-readme && verb
 
 You might also be interested in these projects:
 
-* [base](https://www.npmjs.com/package/base): Framework for rapidly creating high quality, server-side node.js applications, using plugins like building blocks | [homepage](https://github.com/node-base/base "Framework for rapidly creating high quality, server-side node.js applications, using plugins like building blocks")
-* [cache-base](https://www.npmjs.com/package/cache-base): Basic object cache with `get`, `set`, `del`, and `has` methods for node.js/javascript projects. | [homepage](https://github.com/jonschlinkert/cache-base "Basic object cache with `get`, `set`, `del`, and `has` methods for node.js/javascript projects.")
 * [get-value](https://www.npmjs.com/package/get-value): Use property paths like 'a.b.c' to get a nested value from an object. Even works… [more](https://github.com/jonschlinkert/get-value) | [homepage](https://github.com/jonschlinkert/get-value "Use property paths like 'a.b.c' to get a nested value from an object. Even works when keys have dots in them (no other dot-prop library can do this!).")
 * [has-value](https://www.npmjs.com/package/has-value): Returns true if a value exists, false if empty. Works with deeply nested values using… [more](https://github.com/jonschlinkert/has-value) | [homepage](https://github.com/jonschlinkert/has-value "Returns true if a value exists, false if empty. Works with deeply nested values using object paths.")
 * [set-value](https://www.npmjs.com/package/set-value): Create nested values and any intermediaries using dot notation (`'a.b.c'`) paths. | [homepage](https://github.com/jonschlinkert/set-value "Create nested values and any intermediaries using dot notation (`'a.b.c'`) paths.")
+* [write](https://www.npmjs.com/package/write): Write data to a file, replacing the file if it already exists and creating any… [more](https://github.com/jonschlinkert/write) | [homepage](https://github.com/jonschlinkert/write "Write data to a file, replacing the file if it already exists and creating any intermediate directories if they don't already exist. Thin wrapper around node's native fs methods.")
 
 ### Contributors
 
@@ -301,4 +331,4 @@ Released under the [MIT License](LICENSE).
 
 ***
 
-_This file was generated by [verb-generate-readme](https://github.com/verbose/verb-generate-readme), v0.6.0, on April 29, 2018._
+_This file was generated by [verb-generate-readme](https://github.com/verbose/verb-generate-readme), v0.6.0, on May 01, 2018._
