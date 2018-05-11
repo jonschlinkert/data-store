@@ -1,393 +1,509 @@
 'use strict';
 
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const assert = require('assert');
+const flatten = (...args) => [].concat.apply([], args);
+const unique = arr => arr.filter((v, i) => arr.indexOf(v) === i);
+
 /**
- * Module dependencies
+ * Initialize a new `Store` with the given `name`, `options` and `default` data.
+ *
+ * ```js
+ * const store = require('data-store')('abc');
+ * //=> '~/data-store/a.json'
+ *
+ * const store = require('data-store')('abc', { cwd: 'test/fixtures' });
+ * //=> './test/fixtures/abc.json'
+ * ```
+ * @name Store
+ * @param {string} `name` Store name to use for the basename of the `.json` file.
+ * @param {object} `options` See all [available options](#options).
+ * @param {object} `defaults` An object to initialize the store with.
+ * @api public
  */
 
-var path = require('path');
-var util = require('util');
-var base = require('cache-base');
-var Base = base.namespace('cache');
-var debug = require('debug')('data-store');
-var proto = Base.prototype;
-var utils = require('./utils');
+class Store {
+  constructor(name, options = {}, defaults = {}) {
+    if (typeof name !== 'string') {
+      defaults = options;
+      options = name || {};
+      name = options.name;
+    }
+
+    assert.equal(typeof name, 'string', 'expected store name to be a string');
+    const { debounce = 5, indent = 2, home, base } = options;
+    this.name = name;
+    this.options = options;
+    this.defaults = defaults || options.default;
+    this.indent = indent;
+    this.debounce = debounce;
+    this.home = home || process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    this.base = base || path.join(this.home, 'data-store');
+    this.path = this.options.path || path.join(this.base, this.name + '.json');
+    this._data = null;
+  }
+
+  /**
+   * Assign `value` to `key` and save to the file system. Can be a key-value pair,
+   * array of objects, or an object.
+   *
+   * ```js
+   * // key, value
+   * store.set('a', 'b');
+   * //=> {a: 'b'}
+   *
+   * // extend the store with an object
+   * store.set({a: 'b'});
+   * //=> {a: 'b'}
+   * ```
+   * @name .set
+   * @param {string} `key`
+   * @param {any} `val` The value to save to `key`. Must be a valid JSON type: String, Number, Array or Object.
+   * @return {object} `Store` for chaining
+   * @api public
+   */
+
+  set(key, val) {
+    if (isObject(key)) {
+      Object.assign(this.data, key);
+    } else {
+      assert.equal(typeof key, 'string', 'expected key to be a string');
+      set(this.data, key, val);
+    }
+    this.save();
+    return this;
+  }
+
+  /**
+   * Add the given `value` to the array at `key`. Creates a new array if one
+   * doesn't exist, and only adds unique values to the array.
+   *
+   * ```js
+   * store.union('a', 'b');
+   * store.union('a', 'c');
+   * store.union('a', 'd');
+   * store.union('a', 'c');
+   * console.log(store.get('a'));
+   * //=> ['b', 'c', 'd']
+   * ```
+   * @name .union
+   * @param  {string} `key`
+   * @param  {any} `val` The value to union to `key`. Must be a valid JSON type: String, Number, Array or Object.
+   * @return {object} `Store` for chaining
+   * @api public
+   */
+
+  union(key, ...rest) {
+    assert.equal(typeof key, 'string', 'expected key to be a string');
+    let arr = this.get(key);
+    if (arr == null) arr = [];
+    if (!Array.isArray(arr)) arr = [arr];
+    this.set(key, unique(flatten(...arr, ...rest)));
+    return this;
+  }
+
+  /**
+   * Get the stored `value` of `key`.
+   *
+   * ```js
+   * store.set('a', {b: 'c'});
+   * store.get('a');
+   * //=> {b: 'c'}
+   *
+   * store.get();
+   * //=> {a: {b: 'c'}}
+   * ```
+   * @name .get
+   * @param {string} `key`
+   * @return {any} The value to store for `key`.
+   * @api public
+   */
+
+  get(key) {
+    assert.equal(typeof key, 'string', 'expected key to be a string');
+    return get(this.data, key);
+  }
+
+  /**
+   * Returns `true` if the specified `key` has a value.
+   *
+   * ```js
+   * store.set('a', 42);
+   * store.set('c', null);
+   *
+   * store.has('a'); //=> true
+   * store.has('c'); //=> true
+   * store.has('d'); //=> false
+   * ```
+   * @name .has
+   * @param {string} `key`
+   * @return {boolean} Returns true if `key` has
+   * @api public
+   */
+
+  has(key) {
+    assert.equal(typeof key, 'string', 'expected key to be a string');
+    return typeof get(this.data, key) !== 'undefined';
+  }
+
+  /**
+   * Returns `true` if the specified `key` exists.
+   *
+   * ```js
+   * store.set('a', 'b');
+   * store.set('b', false);
+   * store.set('c', null);
+   * store.set('d', true);
+   * store.set('e', undefined);
+   *
+   * store.hasOwn('a'); //=> true
+   * store.hasOwn('b'); //=> true
+   * store.hasOwn('c'); //=> true
+   * store.hasOwn('d'); //=> true
+   * store.hasOwn('e'); //=> true
+   * store.hasOwn('foo'); //=> false
+   * ```
+   * @name .hasOwn
+   * @param {string} `key`
+   * @return {boolean} Returns true if `key` exists
+   * @api public
+   */
+
+  hasOwn(key) {
+    assert.equal(typeof key, 'string', 'expected key to be a string');
+    return hasOwn(this.data, key);
+  }
+
+  /**
+   * Delete one or more properties from the store.
+   *
+   * ```js
+   * store.set('foo.bar', 'baz');
+   * console.log(store.data); //=> { foo: { bar: 'baz' } }
+   * store.del('foo.bar');
+   * console.log(store.data); //=> { foo: {} }
+   * store.del('foo');
+   * console.log(store.data); //=> {}
+   * ```
+   * @name .del
+   * @param {string|Array} `keys` One or more properties to delete.
+   * @api public
+   */
+
+  del(key) {
+    if (Array.isArray(key)) {
+      for (const k of key) this.del(k);
+      return this;
+    }
+    assert.equal(typeof key, 'string', 'expected key to be a string');
+    if (del(this.data, key)) {
+      this.save();
+    }
+    return this;
+  }
+
+  /**
+   * Return a clone of the `store.data` object.
+   *
+   * ```js
+   * console.log(store.clone());
+   * ```
+   * @name .clone
+   * @return {object}
+   * @api public
+   */
+
+  clone() {
+    return cloneDeep(this.data);
+  }
+
+  /**
+   * Reset `store.data` to an empty object.
+   *
+   * ```js
+   * store.clear();
+   * ```
+   * @name .clear
+   * @return {undefined}
+   * @api public
+   */
+
+  clear() {
+    this.data = {};
+  }
+
+  /**
+   * Stringify the store. Takes the same arguments as `JSON.stringify`.
+   *
+   * ```js
+   * console.log(store.json(null, 2));
+   * ```
+   * @name .json
+   * @return {string}
+   * @api public
+   */
+
+  json(replacer = null, space = this.indent) {
+    return JSON.stringify(this.data, replacer, space);
+  }
+
+  /**
+   * Calls [.writeFile()](#writefile) to persist the store to the file system,
+   * after an optional [debounce](#options) period. This method should probably
+   * not be called directly as it's used internally by other methods.
+   *
+   * ```js
+   * store.save();
+   * ```
+   * @name .save
+   * @return {undefined}
+   * @api public
+   */
+
+  save() {
+    if (!this.debounce) return this.writeFile();
+    if (this.save.debounce) return;
+    this.save.debounce = setTimeout(() => this.writeFile(), this.debounce);
+  }
+
+  /**
+   * Delete the store from the file system.
+   *
+   * ```js
+   * store.unlink();
+   * ```
+   * @name .unlink
+   * @return {undefined}
+   * @api public
+   */
+
+  unlink() {
+    let wait = 0;
+
+    if (this.unlink.clear) this.unlink.clear();
+
+    const debounce = () => {
+      const timeout = setTimeout(() => {
+        if (this.save.debounce) {
+          debounce();
+        } else {
+          this.deleteFile();
+        }
+      }, wait++);
+      return () => clearTimeout(timeout);
+    };
+
+    this.unlink.clear = debounce();
+  }
+
+  /**
+   * Immediately write the store to the file system. This method should probably
+   * not be called directly. Unless you are familiar with the inner workings of
+   * the code it's recommended that you use .save() instead.
+   *
+   * ```js
+   * store.writeFile();
+   * ```
+   * @name .writeFile
+   * @return {undefined}
+   */
+
+  writeFile() {
+    if (this.save.debounce) {
+      clearTimeout(this.save.debounce);
+      this.save.debounce = null;
+    }
+    if (!this.saved) mkdir(path.dirname(this.path), this.options.mkdir);
+    this.saved = true;
+    fs.writeFileSync(this.path, this.json(), { mode: 0o0600 });
+  }
+
+  /**
+   * Immediately delete the store from the file system. This method should probably
+   * not be called directly. Unless you are familiar with the inner workings of
+   * the code, it's recommended that you use .unlink() instead.
+   *
+   * ```js
+   * store.deleteFile();
+   * ```
+   * @name .deleteFile
+   * @return {undefined}
+   */
+
+  deleteFile() {
+    if (this.unlink.clear) this.unlink.clear();
+    tryUnlink(this.path);
+  }
+
+  /**
+   * Load the store.
+   * @return {object}
+   */
+
+  load() {
+    try {
+      return (this._data = JSON.parse(fs.readFileSync(this.path)));
+    } catch (err) {
+      if (err.code === 'EACCES') {
+        err.message += '\ndata-store does not have permission to load this file\n';
+        throw err;
+      }
+      if (err.code === 'ENOENT' || err.name === 'SyntaxError') {
+        this._data = {};
+        return {};
+      }
+    }
+  }
+
+  /**
+   * Getter/setter for the `store.data` object, which holds the values
+   * that are persisted to the file system.
+   *
+   * ```js
+   * console.log(store.data); //=> {}
+   * store.data.foo = 'bar';
+   * console.log(store.get('foo')); //=> 'bar'
+   * ```
+   * @name .data
+   * @return {object}
+   */
+
+  set data(val) {
+    this._data = val;
+    this.save();
+  }
+  get data() {
+    this._data = this._data || this.load();
+    if (!this.saved) {
+      this._data = Object.assign({}, this.defaults, this._data);
+    }
+    return this._data;
+  }
+}
+
+/**
+ * Utils
+ */
+
+const mode = opts => opts.mode || 0o777 & ~process.umask();
+const strip = str => str.replace(/\\(?=\.)/g, '');
+const split = str => str.split(/(?<!\\)\./).map(strip);
+
+/**
+ * Create a directory and any intermediate directories that might exist.
+ */
+
+function mkdir(dirname, options = {}) {
+  assert.equal(typeof dirname, 'string', 'expected dirname to be a string');
+  const opts = Object.assign({ cwd: process.cwd(), fs }, options);
+  const segs = path.relative(opts.cwd, dirname).split(path.sep);
+  const make = dir => fs.mkdirSync(dir, mode(opts));
+  for (let i = 0; i <= segs.length; i++) {
+    try {
+      make((dirname = path.join(opts.cwd, ...segs.slice(0, i))));
+    } catch (err) {
+      handleError(dirname, opts)(err);
+    }
+  }
+  return dirname;
+}
+
+function handleError(dir, opts = {}) {
+  return (err) => {
+    if (err.code !== 'EEXIST' || path.dirname(dir) === dir || !opts.fs.statSync(dir).isDirectory()) {
+      throw err;
+    }
+  };
+}
+
+function tryUnlink(filepath) {
+  try {
+    fs.unlinkSync(filepath);
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+      throw err;
+    }
+  }
+}
+
+function get(data = {}, prop = '') {
+  return data[prop] == null
+    ? split(prop).reduce((acc, k) => acc && acc[strip(k)], data)
+    : data[prop];
+}
+
+function set(data = {}, prop = '', val) {
+  return split(prop).reduce((acc, k, i, arr) => {
+    let value = arr.length - 1 > i ? (acc[k] || {}) : val;
+    if (!isObject(value) && i < arr.length - 1) value = {};
+    return (acc[k] = value);
+  }, data);
+}
+
+function del(data = {}, prop = '') {
+  if (!prop) return false;
+  if (data.hasOwnProperty(prop)) {
+    delete data[prop];
+    return true;
+  }
+  const segs = split(prop);
+  const last = segs.pop();
+  const val = segs.length ? get(data, segs.join('.')) : data;
+  if (isObject(val) && val.hasOwnProperty(last)) {
+    delete val[last];
+    return true;
+  }
+}
+
+function hasOwn(data = {}, prop = '') {
+  if (!prop) return false;
+  if (data.hasOwnProperty(prop)) return true;
+  if (prop.indexOf('.') === -1) return false;
+  const segs = split(prop);
+  const last = segs.pop();
+  const val = segs.length ? get(data, segs.join('.')) : data;
+  return isObject(val) && val.hasOwnProperty(last);
+}
+
+function isObject(val) {
+  return typeOf(val) === 'object';
+}
+
+/**
+ * Deeply clone plain objects and arrays.
+ */
+
+function cloneDeep(value) {
+  const obj = {};
+  switch (typeOf(value)) {
+    case 'object':
+      for (const key of Object.keys(value)) {
+        obj[key] = cloneDeep(value[key]);
+      }
+      return obj;
+    case 'array':
+      return value.map(ele => cloneDeep(ele));
+    default: {
+      return value;
+    }
+  }
+}
+
+function typeOf(val) {
+  if (typeof val === 'string') return 'string';
+  if (Array.isArray(val)) return 'array';
+  if (val instanceof RegExp) {
+    return 'regexp';
+  }
+  if (val && typeof val === 'object') {
+    return 'object';
+  }
+}
 
 /**
  * Expose `Store`
  */
 
 module.exports = Store;
-
-/**
- * Initialize a new `Store` with the given `name`
- * and `options`.
- *
- * ```js
- * var store = require('data-store')('abc');
- * //=> '~/data-store/a.json'
- *
- * var store = require('data-store')('abc', {
- *   cwd: 'test/fixtures'
- * });
- * //=> './test/fixtures/abc.json'
- * ```
- *
- * @param  {String} `name` Store name to use for the basename of the `.json` file.
- * @param  {Object} `options`
- * @param {String} `options.cwd` Current working directory for storage. If not defined, the user home directory is used, based on OS. This is the only option currently, other may be added in the future.
- * @param {Number} `options.indent` Number passed to `JSON.stringify` when saving the data. Defaults to `2` if `null` or `undefined`
- * @api public
- */
-
-function Store(name, options) {
-  if (!(this instanceof Store)) {
-    return new Store(name, options);
-  }
-
-  if (typeof name !== 'string') {
-    options = name;
-    name = null;
-  }
-
-  Base.call(this);
-  this.isStore = true;
-  this.options = options || {};
-  this.initStore(name);
-}
-
-/**
- * Inherit `Base`
- */
-
-util.inherits(Store, Base);
-
-/**
- * Initialize store defaults
- */
-
-Store.prototype.initStore = function(name) {
-  this.name = name || utils.project(process.cwd());
-  this.cwd = utils.resolve(this.options.cwd || '~/.config/data-store');
-  this.path = this.options.path || path.resolve(this.cwd, this.name + '.json');
-  this.relative = path.relative(process.cwd(), this.path);
-
-  debug('Initializing store <%s>', this.path);
-
-  this.data = this.readFile(this.path);
-  this.define('cache', utils.clone(this.data));
-  this.on('set', function() {
-    this.save();
-  }.bind(this));
-};
-
-/**
- * Create a namespaced "sub-store" that persists data to its file
- * in a sub-folder of the same directory as the "parent" store.
- *
- * ```js
- * store.create('foo');
- * store.foo.set('a', 'b');
- * console.log(store.foo.get('a'));
- * //=> 'b'
- * ```
- * @param {String} `name` The name of the sub-store.
- * @param {Object} `options`
- * @return {Object} Returns the sub-store instance.
- * @api public
- */
-
-Store.prototype.create = function(name, options) {
-  if (utils.isStore(this, name)) {
-    return this[name];
-  }
-  utils.validateName(this, name);
-
-  var self = this;
-  var cwd = path.join(path.dirname(this.path), this.name);
-  var substore = new Store(name, { cwd: cwd });
-  this[name] = substore;
-
-  substore.on('set', function(key, val) {
-    self.set([name, key], val);
-  });
-
-  return substore;
-};
-
-/**
- * Assign `value` to `key` and save to disk. Can be
- * a key-value pair or an object.
- *
- * ```js
- * // key, value
- * store.set('a', 'b');
- * //=> {a: 'b'}
- *
- * // extend the store with an object
- * store.set({a: 'b'});
- * //=> {a: 'b'}
- *
- * // extend the the given value
- * store.set('a', {b: 'c'});
- * store.set('a', {d: 'e'}, true);
- * //=> {a: {b 'c', d: 'e'}}
- *
- * // overwrite the the given value
- * store.set('a', {b: 'c'});
- * store.set('a', {d: 'e'});
- * //=> {d: 'e'}
- * ```
- * @name .set
- * @param {String} `key`
- * @param {any} `val` The value to save to `key`. Must be a valid JSON type: String, Number, Array or Object.
- * @return {Object} `Store` for chaining
- * @api public
- */
-
-/**
- * Add or append an array of unique values to the given `key`.
- *
- * ```js
- * store.union('a', ['a']);
- * store.union('a', ['b']);
- * store.union('a', ['c']);
- * store.get('a');
- * //=> ['a', 'b', 'c']
- * ```
- *
- * @param  {String} `key`
- * @return {any} The array to add or append for `key`.
- * @api public
- */
-
-Store.prototype.union = function(key, val) {
-  utils.union(this.cache, key, val);
-  this.emit('union', key, val);
-  this.save();
-  return this;
-};
-
-/**
- * Get the stored `value` of `key`, or return the entire store
- * if no `key` is defined.
- *
- * ```js
- * store.set('a', {b: 'c'});
- * store.get('a');
- * //=> {b: 'c'}
- *
- * store.get();
- * //=> {b: 'c'}
- * ```
- *
- * @name .get
- * @param  {String} `key`
- * @return {any} The value to store for `key`.
- * @api public
- */
-
-/**
- * Returns `true` if the specified `key` has truthy value.
- *
- * ```js
- * store.set('a', 'b');
- * store.set('c', null);
- * store.has('a'); //=> true
- * store.has('c'); //=> false
- * store.has('d'); //=> false
- * ```
- * @name .has
- * @param  {String} `key`
- * @return {Boolean} Returns true if `key` has
- * @api public
- */
-
-/**
- * Returns `true` if the specified `key` exists.
- *
- * ```js
- * store.set('a', 'b');
- * store.set('b', false);
- * store.set('c', null);
- * store.set('d', true);
- *
- * store.hasOwn('a'); //=> true
- * store.hasOwn('b'); //=> true
- * store.hasOwn('c'); //=> true
- * store.hasOwn('d'); //=> true
- * store.hasOwn('foo'); //=> false
- * ```
- *
- * @param  {String} `key`
- * @return {Boolean} Returns true if `key` exists
- * @api public
- */
-
-Store.prototype.hasOwn = function(key) {
-  var val;
-  if (key.indexOf('.') === -1) {
-    val = this.cache.hasOwnProperty(key);
-  } else {
-    val = utils.hasOwn(this.cache, key);
-  }
-  return val;
-};
-
-/**
- * Persist the store to disk.
- *
- * ```js
- * store.save();
- * ```
- * @param {String} `dest` Optionally define an alternate destination file path.
- * @api public
- */
-
-Store.prototype.save = function(dest) {
-  this.data = this.cache;
-  writeJson(dest || this.path, this.cache, this.options.indent);
-  return this;
-};
-
-/**
- * Clear in-memory cache.
- *
- * ```js
- * store.clear();
- * ```
- * @api public
- */
-
-Store.prototype.clear = function() {
-  this.cache = {};
-  this.data = {};
-  return this;
-};
-
-/**
- * Delete `keys` from the store, or delete the entire store
- * if no keys are passed. A `del` event is also emitted for each key
- * deleted.
- *
- * **Note that to delete the entire store you must pass `{force: true}`**
- *
- * ```js
- * store.del();
- *
- * // to delete paths outside cwd
- * store.del({force: true});
- * ```
- *
- * @param {String|Array|Object} `keys` Keys to remove, or options.
- * @param {Object} `options`
- * @api public
- */
-
-Store.prototype.del = function(keys, options) {
-  var isArray = Array.isArray(keys);
-  if (typeof keys === 'string' || isArray) {
-    keys = utils.arrayify(keys);
-  } else {
-    options = keys;
-    keys = null;
-  }
-
-  options = options || {};
-
-  if (keys) {
-    keys.forEach(function(key) {
-      proto.del.call(this, key);
-    }.bind(this));
-    this.save();
-    return this;
-  }
-
-  if (options.force !== true) {
-    throw new Error('options.force is required to delete the entire cache.');
-  }
-
-  keys = Object.keys(this.cache);
-  this.clear();
-
-  // if no keys are passed, delete the entire store
-  utils.del.sync(this.path, options);
-  keys.forEach(function(key) {
-    this.emit('del', key);
-  }.bind(this));
-  return this;
-};
-
-/**
- * Returns an array of all Store properties.
- */
-
-utils.define(Store.prototype, 'keys', {
-  configurable: true,
-  enumerable: true,
-  set: function(keys) {
-    utils.define(this, 'keys', keys);
-  },
-  get: function fn() {
-    if (fn.keys) return fn.keys;
-    fn.keys = [];
-    for (var key in this) fn.keys.push(key);
-    return fn.keys;
-  }
-});
-
-/**
- * Define a non-enumerable property on the instance.
- *
- * @param {String} `key`
- * @param {any} `value`
- * @return {Object} Returns the instance for chaining.
- * @api public
- */
-
-Store.prototype.define = function(key, value) {
-  utils.define(this, key, value);
-  return this;
-};
-
-/**
- * Read JSON files.
- *
- * @param {String} `fp`
- * @return {Object}
- */
-
-Store.prototype.readFile = function(filepath) {
-  try {
-    var str = utils.fs.readFileSync(path.resolve(filepath), 'utf8');
-    this.loadedConfig = true;
-    return JSON.parse(str);
-  } catch (err) {}
-  this.loadedConfig = false;
-  return {};
-};
-
-/**
- * Synchronously write files to disk, also creating any
- * intermediary directories if they don't exist.
- *
- * @param {String} `dest`
- * @param {String} `str`
- * @param {Number} `indent` Indent passed to JSON.stringify (default 2)
- */
-
-function writeJson(dest, str, indent) {
-  if (typeof indent === 'undefined' || indent === null) {
-    indent = 2;
-  }
-  var dir = path.dirname(dest);
-  try {
-    if (!utils.fs.existsSync(dir)) {
-      utils.mkdirp.sync(dir);
-    }
-    utils.fs.writeFileSync(dest, JSON.stringify(str, null, indent));
-  } catch (err) {
-    err.origin = __filename;
-    err.reason = 'data-store cannot write to: ' + dest;
-    throw new Error(err);
-  }
-}
