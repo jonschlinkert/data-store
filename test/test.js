@@ -192,6 +192,11 @@ describe('store', function() {
       store.set({ a: { b: { c: 'd' } } });
       assert.equal(store.get('a.b.c'), 'd');
     });
+
+    it('should `.get()` a nested value with escaped dot', function() {
+      store.set({ 'a.b': { c: 'd' } });
+      assert.equal(store.get('a\\.b.c'), 'd');
+    });
   });
 
   describe('union', function() {

@@ -42,7 +42,6 @@ class Store {
     this.home = home || process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
     this.base = base || path.join(this.home, 'data-store');
     this.path = this.options.path || path.join(this.base, this.name + '.json');
-    this._data = null;
   }
 
   /**
@@ -232,6 +231,7 @@ class Store {
 
   clear() {
     this.data = {};
+    this.save();
   }
 
   /**
@@ -388,8 +388,6 @@ class Store {
  */
 
 const mode = opts => opts.mode || 0o777 & ~process.umask();
-const strip = str => str.replace(/\\(?=\.)/g, '');
-const split = str => str.split(/(?<!\\)\./).map(strip);
 
 /**
  * Create a directory and any intermediate directories that might exist.
@@ -412,7 +410,8 @@ function mkdir(dirname, options = {}) {
 
 function handleError(dir, opts = {}) {
   return (err) => {
-    if (err.code !== 'EEXIST' || path.dirname(dir) === dir || !opts.fs.statSync(dir).isDirectory()) {
+    if (err.code === 'EEXIST' || err.code === 'EISDIR') return;
+    if (path.dirname(dir) === dir || !opts.fs.statSync(dir).isDirectory()) {
       throw err;
     }
   };
@@ -430,7 +429,7 @@ function tryUnlink(filepath) {
 
 function get(data = {}, prop = '') {
   return data[prop] == null
-    ? split(prop).reduce((acc, k) => acc && acc[strip(k)], data)
+    ? split(prop).reduce((acc, k) => acc && acc[k], data)
     : data[prop];
 }
 
@@ -469,6 +468,16 @@ function hasOwn(data = {}, prop = '') {
 
 function isObject(val) {
   return typeOf(val) === 'object';
+}
+
+function split(str) {
+  const segs = str.split('.');
+  for (let i = 0; i < segs.length; i++) {
+    while (segs[i] && segs[i].slice(-1) === '\\') {
+      segs[i] = segs[i].slice(0, -1) + '.' + segs.splice(i + 1, 1);
+    }
+  }
+  return segs;
 }
 
 /**
