@@ -34,6 +34,7 @@ class Store {
 
     assert.equal(typeof name, 'string', 'expected store name to be a string');
     const { debounce = 5, indent = 2, home, base } = options;
+    if (!base && options.cwd) base = options.cwd;
     this.name = name;
     this.options = options;
     this.defaults = defaults || options.default;
