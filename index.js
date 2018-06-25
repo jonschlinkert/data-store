@@ -398,7 +398,11 @@ function mkdir(dirname, options = {}) {
   assert.equal(typeof dirname, 'string', 'expected dirname to be a string');
   const opts = Object.assign({ cwd: process.cwd(), fs }, options);
   const segs = path.relative(opts.cwd, dirname).split(path.sep);
-  const make = dir => fs.mkdirSync(dir, mode(opts));
+  const make = dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, mode(opts));
+    }
+  }
   for (let i = 0; i <= segs.length; i++) {
     try {
       make((dirname = path.join(opts.cwd, ...segs.slice(0, i))));
