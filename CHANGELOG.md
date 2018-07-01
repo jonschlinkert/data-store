@@ -32,11 +32,25 @@ Changelog entries are classified using the following labels _(from [keep-a-chang
 
 </details>
 
+## [3.0.3] - 2017-05-22
 
-## [2.0.0] - 2017-05-22
+- Improvements to debounce for `.save()`
 
-- Use XDG directory
-- Merge pull request #8 from jamen/master
+**Deprecated**
+
+- `.deleteFile()` will be removed in the next major release
+
+## [3.0.2] - 2017-05-22
+
+**Fixed**
+
+- Merge pull request #13 from nytamin/master - adds typings, `EPERM` error handling for Windows
+
+## [2.0.0] - 2018-05-01
+
+**Added**
+
+- Merge pull request #8 from jamen/master - use XDG directory
 
 ## [1.0.0] - 2017-05-22
 

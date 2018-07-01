@@ -305,6 +305,11 @@ class Store {
     tryUnlink(this.path);
   }
 
+  // DEPRECATED: will be removed in the next major release
+  deleteFile() {
+    return this.unlink();
+  }
+
   /**
    * Load the store.
    * @return {object}

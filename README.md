@@ -46,7 +46,7 @@ console.log(store.data);
 
 ## API
 
-### [Store](index.js#L27)
+### [Store](index.js#L28)
 
 Initialize a new `Store` with the given `name`, `options` and `default` data.
 
@@ -66,7 +66,7 @@ const store = require('data-store')('abc', { cwd: 'test/fixtures' });
 //=> './test/fixtures/abc.json'
 ```
 
-### [.set](index.js#L68)
+### [.set](index.js#L70)
 
 Assign `value` to `key` and save to the file system. Can be a key-value pair, array of objects, or an object.
 
@@ -88,7 +88,7 @@ store.set({a: 'b'});
 //=> {a: 'b'}
 ```
 
-### [.union](index.js#L98)
+### [.union](index.js#L100)
 
 Add the given `value` to the array at `key`. Creates a new array if one doesn't exist, and only adds unique values to the array.
 
@@ -109,7 +109,7 @@ console.log(store.get('a'));
 //=> ['b', 'c', 'd']
 ```
 
-### [.get](index.js#L124)
+### [.get](index.js#L126)
 
 Get the stored `value` of `key`.
 
@@ -129,7 +129,7 @@ store.get();
 //=> {a: {b: 'c'}}
 ```
 
-### [.has](index.js#L146)
+### [.has](index.js#L148)
 
 Returns `true` if the specified `key` has a value.
 
@@ -149,7 +149,7 @@ store.has('c'); //=> true
 store.has('d'); //=> false
 ```
 
-### [.hasOwn](index.js#L174)
+### [.hasOwn](index.js#L176)
 
 Returns `true` if the specified `key` exists.
 
@@ -175,7 +175,7 @@ store.hasOwn('e'); //=> true
 store.hasOwn('foo'); //=> false
 ```
 
-### [.del](index.js#L195)
+### [.del](index.js#L197)
 
 Delete one or more properties from the store.
 
@@ -194,7 +194,7 @@ store.del('foo');
 console.log(store.data); //=> {}
 ```
 
-### [.clone](index.js#L218)
+### [.clone](index.js#L220)
 
 Return a clone of the `store.data` object.
 
@@ -206,9 +206,9 @@ Return a clone of the `store.data` object.
 console.log(store.clone());
 ```
 
-### [.clear](index.js#L233)
+### [.clear](index.js#L235)
 
-Reset `store.data` to an empty object.
+Clear `store.data` to an empty object.
 
 * `returns` **{undefined}**
 
@@ -218,7 +218,7 @@ Reset `store.data` to an empty object.
 store.clear();
 ```
 
-### [.json](index.js#L249)
+### [.json](index.js#L251)
 
 Stringify the store. Takes the same arguments as `JSON.stringify`.
 
@@ -230,7 +230,7 @@ Stringify the store. Takes the same arguments as `JSON.stringify`.
 console.log(store.json(null, 2));
 ```
 
-### [.save](index.js#L266)
+### [.save](index.js#L268)
 
 Calls [.writeFile()](#writefile) to persist the store to the file system, after an optional [debounce](#options) period. This method should probably not be called directly as it's used internally by other methods.
 
@@ -242,7 +242,7 @@ Calls [.writeFile()](#writefile) to persist the store to the file system, after 
 store.save();
 ```
 
-### [.unlink](index.js#L283)
+### [.unlink](index.js#L303)
 
 Delete the store from the file system.
 
@@ -311,7 +311,7 @@ You might also be interested in these projects:
 
 | **Commits** | **Contributor** | 
 | --- | --- |
-| 156 | [jonschlinkert](https://github.com/jonschlinkert) |
+| 159 | [jonschlinkert](https://github.com/jonschlinkert) |
 | 4 | [doowb](https://github.com/doowb) |
 | 3 | [nytamin](https://github.com/nytamin) |
 | 2 | [charlike-old](https://github.com/charlike-old) |
