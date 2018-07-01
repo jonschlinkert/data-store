@@ -398,11 +398,7 @@ function mkdir(dirname, options = {}) {
   assert.equal(typeof dirname, 'string', 'expected dirname to be a string');
   const opts = Object.assign({ cwd: process.cwd(), fs }, options);
   const segs = path.relative(opts.cwd, dirname).split(path.sep);
-  const make = dir => {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, mode(opts));
-    }
-  }
+  const make = dir => fs.mkdirSync(dir, mode(opts));
   for (let i = 0; i <= segs.length; i++) {
     try {
       make((dirname = path.join(opts.cwd, ...segs.slice(0, i))));
@@ -414,9 +410,14 @@ function mkdir(dirname, options = {}) {
 }
 
 function handleError(dir, opts = {}) {
-  return (err) => {
-    if (err.code === 'EEXIST' || err.code === 'EISDIR') return;
-    if (path.dirname(dir) === dir || !opts.fs.statSync(dir).isDirectory()) {
+  return err => {
+    if (/null bytes/.test(err.message)) throw err;
+
+    const isIgnored = ['EEXIST', 'EISDIR', 'EPERM'].includes(err.code)
+      && opts.fs.statSync(dir).isDirectory()
+      && path.dirname(dir) !== dir;
+
+    if (!isIgnored) {
       throw err;
     }
   };
@@ -461,20 +462,6 @@ function del(data = {}, prop = '') {
   }
 }
 
-function hasOwn(data = {}, prop = '') {
-  if (!prop) return false;
-  if (data.hasOwnProperty(prop)) return true;
-  if (prop.indexOf('.') === -1) return false;
-  const segs = split(prop);
-  const last = segs.pop();
-  const val = segs.length ? get(data, segs.join('.')) : data;
-  return isObject(val) && val.hasOwnProperty(last);
-}
-
-function isObject(val) {
-  return typeOf(val) === 'object';
-}
-
 function split(str) {
   const segs = str.split('.');
   for (let i = 0; i < segs.length; i++) {
@@ -493,7 +480,7 @@ function cloneDeep(value) {
   const obj = {};
   switch (typeOf(value)) {
     case 'object':
-      for (const key of Object.keys(value)) {
+      for (let key of Object.keys(value)) {
         obj[key] = cloneDeep(value[key]);
       }
       return obj;
@@ -505,15 +492,29 @@ function cloneDeep(value) {
   }
 }
 
+function hasOwn(data = {}, prop = '') {
+  if (!prop) return false;
+  if (data.hasOwnProperty(prop)) return true;
+  if (prop.indexOf('.') === -1) return false;
+  const segs = split(prop);
+  const last = segs.pop();
+  const val = segs.length ? get(data, segs.join('.')) : data;
+  return isObject(val) && val.hasOwnProperty(last);
+}
+
 function typeOf(val) {
-  if (typeof val === 'string') return 'string';
   if (Array.isArray(val)) return 'array';
-  if (val instanceof RegExp) {
-    return 'regexp';
-  }
+  if (typeof val === 'string') return 'string';
+  if (val instanceof RegExp) return 'regexp';
+  if (val instanceof Date) return 'date';
   if (val && typeof val === 'object') {
     return 'object';
   }
+  return typeof val;
+}
+
+function isObject(val) {
+  return typeOf(val) === 'object';
 }
 
 /**
