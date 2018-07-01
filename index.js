@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const assert = require('assert');
+const XDG_CONFIG_HOME = process.env.XDG_CONFIG_HOME;
 const flatten = (...args) => [].concat.apply([], args);
 const unique = arr => arr.filter((v, i) => arr.indexOf(v) === i);
 
@@ -33,16 +34,17 @@ class Store {
     }
 
     assert.equal(typeof name, 'string', 'expected store name to be a string');
-    const { debounce = 5, indent = 2, home, base } = options;
+    let { debounce = 5, indent = 2, home, base } = options;
     if (!base && options.cwd) base = options.cwd;
     this.name = name;
     this.options = options;
     this.defaults = defaults || options.default;
-    this.indent = indent;
     this.debounce = debounce;
-    this.home = home || process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    this.indent = indent;
+    this.home = home || XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
     this.base = base || path.join(this.home, 'data-store');
-    this.path = this.options.path || path.join(this.base, this.name + '.json');
+    this.path = this.options.path || path.join(this.base, `${this.name}.json`);
+    this.timeouts = {};
   }
 
   /**
@@ -220,7 +222,7 @@ class Store {
   }
 
   /**
-   * Reset `store.data` to an empty object.
+   * Clear `store.data` to an empty object.
    *
    * ```js
    * store.clear();
@@ -264,39 +266,10 @@ class Store {
    */
 
   save() {
-    if (!this.debounce) return this.writeFile();
-    if (this.save.debounce) return;
-    this.save.debounce = setTimeout(() => this.writeFile(), this.debounce);
-  }
-
-  /**
-   * Delete the store from the file system.
-   *
-   * ```js
-   * store.unlink();
-   * ```
-   * @name .unlink
-   * @return {undefined}
-   * @api public
-   */
-
-  unlink() {
-    let wait = 0;
-
-    if (this.unlink.clear) this.unlink.clear();
-
-    const debounce = () => {
-      const timeout = setTimeout(() => {
-        if (this.save.debounce) {
-          debounce();
-        } else {
-          this.deleteFile();
-        }
-      }, wait++);
-      return () => clearTimeout(timeout);
-    };
-
-    this.unlink.clear = debounce();
+    const write = this.writeFile.bind(this);
+    if (!this.debounce) return write();
+    if (this.timeouts.save) clearTimeout(this.timeouts.save);
+    this.timeouts.save = setTimeout(write, this.debounce);
   }
 
   /**
@@ -312,29 +285,23 @@ class Store {
    */
 
   writeFile() {
-    if (this.save.debounce) {
-      clearTimeout(this.save.debounce);
-      this.save.debounce = null;
-    }
-    if (!this.saved) mkdir(path.dirname(this.path), this.options.mkdir);
-    this.saved = true;
+    mkdir(path.dirname(this.path), this.options.mkdir);
     fs.writeFileSync(this.path, this.json(), { mode: 0o0600 });
   }
 
   /**
-   * Immediately delete the store from the file system. This method should probably
-   * not be called directly. Unless you are familiar with the inner workings of
-   * the code, it's recommended that you use .unlink() instead.
+   * Delete the store from the file system.
    *
    * ```js
-   * store.deleteFile();
+   * store.unlink();
    * ```
-   * @name .deleteFile
+   * @name .unlink
    * @return {undefined}
+   * @api public
    */
 
-  deleteFile() {
-    if (this.unlink.clear) this.unlink.clear();
+  unlink() {
+    clearTimeout(this.timeouts.save);
     tryUnlink(this.path);
   }
 
@@ -385,20 +352,16 @@ class Store {
 }
 
 /**
- * Utils
- */
-
-const mode = opts => opts.mode || 0o777 & ~process.umask();
-
-/**
  * Create a directory and any intermediate directories that might exist.
  */
 
 function mkdir(dirname, options = {}) {
+  if (fs.existsSync(dirname)) return;
   assert.equal(typeof dirname, 'string', 'expected dirname to be a string');
   const opts = Object.assign({ cwd: process.cwd(), fs }, options);
+  const mode = opts.mode || 0o777 & ~process.umask();
   const segs = path.relative(opts.cwd, dirname).split(path.sep);
-  const make = dir => fs.mkdirSync(dir, mode(opts));
+  const make = dir => fs.mkdirSync(dir, mode);
   for (let i = 0; i <= segs.length; i++) {
     try {
       make((dirname = path.join(opts.cwd, ...segs.slice(0, i))));
@@ -473,7 +436,8 @@ function split(str) {
 }
 
 /**
- * Deeply clone plain objects and arrays.
+ * Deeply clone plain objects and arrays. We're only concerned with
+ * cloning values that are valid in JSON.
  */
 
 function cloneDeep(value) {

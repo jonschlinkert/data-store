@@ -8,31 +8,67 @@ const assert = require('assert');
 const Store = require('..');
 const tests = (...args) => path.resolve(__dirname, ...args);
 const storePath = tests('fixtures/tests.json');
+del.sync(storePath);
 let store;
 
-describe('store', function() {
-  beforeEach(function() {
-    store = new Store({ name: 'abc', path: storePath });
+describe('store', () => {
+  beforeEach(() => {
+    assert(!fs.existsSync(storePath));
+    store = new Store({ name: 'abc', path: storePath, debounce: 0 });
   });
 
-  afterEach(async function() {
-    store.data = {};
+  afterEach(() => store.unlink());
+  after(async() => {
+    await store.unlink();
+    await del(tests('fixtures'));
     await del(tests('actual'));
-    await del(store.path);
   });
 
-  describe('create', function() {
-    it('should create an instance of Store', function() {
+  describe('create', () => {
+    it('should create an instance of Store', () => {
       assert(store instanceof Store);
     });
 
-    it('should create a store with the given `name`', function() {
+    it('should initialize store', cb => {
       store.set('foo', 'bar');
-      assert(store.data.hasOwnProperty('foo'));
+      setTimeout(() => {
+        assert(fs.existsSync(store.path));
+        cb();
+      }, 10);
+    });
+
+    it('should allow debounce to be customized', cb => {
+      store.debounce = 10;
+      store.set('foo', 'bar');
+      assert(!fs.existsSync(store.path));
+      assert.equal(store.get('foo'), 'bar');
+      assert(!fs.existsSync(store.path));
+
+      setTimeout(() => {
+        assert(fs.existsSync(store.path));
+        cb();
+      }, 20);
+    });
+
+    it('should not create path until after debounce', cb => {
+      store.debounce = 100;
+      store.set('foo', 'bar');
+      assert(!fs.existsSync(store.path));
+      assert.equal(store.get('foo'), 'bar');
+      assert(!fs.existsSync(store.path));
+
+      setTimeout(() => {
+        assert(!fs.existsSync(store.path));
+        cb();
+      }, 10);
+    });
+
+    it('should create a store with the given `name`', () => {
+      store.set('foo', 'bar');
       assert.equal(store.data.foo, 'bar');
     });
 
-    it('should initialize a store with the given defaults', function() {
+    it('should initialize a store with the given defaults', () => {
       const defaults = { foo: 'bar', baz: 'qux' };
       store = new Store('abc', { path: storePath }, defaults);
       assert.equal(store.get('foo'), 'bar');
@@ -40,38 +76,24 @@ describe('store', function() {
     });
   });
 
-  // describe('debounce', function() {
-  //   it('should delay saving', function(cb) {
-  //     store = new Store('abc', { path: storePath, indent: 0, delay: 1 });
-  //     store.set('foo', 'bar');
-
-  //     assert.equal(store.get('foo'), 'bar');
-
-  //     setTimeout(() => {
-  //       assert.deepEqual(JSON.parse(fs.readFileSync(store.path)), { foo: 'bar' });
-  //       cb();
-  //     }, 10);
-  //   });
-  // });
-
-  describe('set', function() {
-    it('should `.set()` a value', function() {
+  describe('set', () => {
+    it('should `.set()` a value', () => {
       store.set('one', 'two');
       assert.equal(store.data.one, 'two');
     });
 
-    it('should `.set()` an object', function() {
+    it('should `.set()` an object', () => {
       store.set({ four: 'five', six: 'seven' });
       assert.equal(store.data.four, 'five');
       assert.equal(store.data.six, 'seven');
     });
 
-    it('should `.set()` a nested value', function() {
+    it('should `.set()` a nested value', () => {
       store.set('a.b.c.d', { e: 'f' });
       assert.equal(store.data.a.b.c.d.e, 'f');
     });
 
-    it('should save data that is added directly to `storedata`', function() {
+    it('should save data that is added directly to `storedata`', () => {
       store.data.foo = 'bar';
       store.set('a.b.c.d', { e: 'f' });
       assert.equal(store.data.a.b.c.d.e, 'f');
@@ -79,13 +101,13 @@ describe('store', function() {
     });
   });
 
-  describe('union', function() {
-    it('should add and arrayify a new value', function() {
+  describe('union', () => {
+    it('should add and arrayify a new value', () => {
       store.union('one', 'two');
       assert.deepEqual(store.data.one, ['two']);
     });
 
-    it('should uniquify duplicate values', function() {
+    it('should uniquify duplicate values', () => {
       store.union('one', 'two');
       assert.deepEqual(store.data.one, ['two']);
 
@@ -93,7 +115,7 @@ describe('store', function() {
       assert.deepEqual(store.data.one, ['two']);
     });
 
-    it('should union an existing value', function() {
+    it('should union an existing value', () => {
       store.union('one', 'a');
       assert.deepEqual(store.data.one, ['a']);
 
@@ -105,8 +127,8 @@ describe('store', function() {
     });
   });
 
-  describe('has', function() {
-    it('should return true if a key has a value', function() {
+  describe('has', () => {
+    it('should return true if a key has a value', () => {
       store.set('foo', 'bar');
       store.set('baz', null);
       store.set('qux', undefined);
@@ -117,7 +139,7 @@ describe('store', function() {
       assert(!store.has('qux'));
     });
 
-    it('should return true if a nested key has a value', function() {
+    it('should return true if a nested key has a value', () => {
       store.set('a.b.c.d', { x: 'zzz' });
       store.set('a.b.c.e', { f: null });
       store.set('a.b.g.j', { k: undefined });
@@ -136,8 +158,8 @@ describe('store', function() {
     });
   });
 
-  describe('hasOwn', function() {
-    it('should return true if a key exists', function() {
+  describe('hasOwn', () => {
+    it('should return true if a key exists', () => {
       store.set('foo', 'bar');
       store.set('baz', null);
       store.set('qux', undefined);
@@ -148,7 +170,7 @@ describe('store', function() {
       assert(store.hasOwn('qux'));
     });
 
-    it('should work with escaped keys', function() {
+    it('should work with escaped keys', () => {
       store.set('foo\\.baz', 'bar');
       store.set('baz', null);
       store.set('qux', undefined);
@@ -163,7 +185,7 @@ describe('store', function() {
       assert(store.hasOwn('foo\\.bar.baz\\.qux'));
     });
 
-    it('should return true if a nested key exists', function() {
+    it('should return true if a nested key exists', () => {
       store.set('a.b.c.d', { x: 'zzz' });
       store.set('a.b.c.e', { f: null });
       store.set('a.b.g.j', { k: undefined });
@@ -182,25 +204,25 @@ describe('store', function() {
     });
   });
 
-  describe('get', function() {
-    it('should `.get()` a stored value', function() {
+  describe('get', () => {
+    it('should `.get()` a stored value', () => {
       store.set('three', 'four');
       assert.equal(store.get('three'), 'four');
     });
 
-    it('should `.get()` a nested value', function() {
+    it('should `.get()` a nested value', () => {
       store.set({ a: { b: { c: 'd' } } });
       assert.equal(store.get('a.b.c'), 'd');
     });
 
-    it('should `.get()` a nested value with escaped dot', function() {
+    it('should `.get()` a nested value with escaped dot', () => {
       store.set({ 'a.b': { c: 'd' } });
       assert.equal(store.get('a\\.b.c'), 'd');
     });
   });
 
-  describe('union', function() {
-    it('should `.del()` a stored value', function() {
+  describe('union', () => {
+    it('should `.del()` a stored value', () => {
       store.set('a', 'b');
       store.set('c', 'd');
       assert(store.data.hasOwnProperty('a'));
@@ -216,8 +238,8 @@ describe('store', function() {
     });
   });
 
-  describe('del', function() {
-    it('should delete stored values', function() {
+  describe('del', () => {
+    it('should delete stored values', () => {
       store.set('a', 'b');
       store.set('c', 'd');
       store.set('e', 'f');
@@ -227,7 +249,7 @@ describe('store', function() {
       assert.deepEqual(store.data, {});
     });
 
-    it('should delete a nested stored value', function() {
+    it('should delete a nested stored value', () => {
       store.set('a.b.c', 'b');
       assert.deepEqual(store.data, { a: { b: { c: 'b' } } });
       store.del('a.b.c');
@@ -238,14 +260,14 @@ describe('store', function() {
       assert.deepEqual(store.data, {});
     });
 
-    it('should ignore nested properties that do not exist', function() {
+    it('should ignore nested properties that do not exist', () => {
       store.set('a.b.c', 'b');
       assert.deepEqual(store.data, { a: { b: { c: 'b' } } });
       store.del('a.b.c.d');
       assert.deepEqual(store.data, { a: { b: { c: 'b' } } });
     });
 
-    it('should delete multiple stored values', function() {
+    it('should delete multiple stored values', () => {
       store.set('a', 'b');
       store.set('c', 'd');
       store.set('e', 'f');
@@ -254,8 +276,8 @@ describe('store', function() {
     });
   });
 
-  describe('json', function() {
-    it('should use the indent value defined on ctor options', function() {
+  describe('json', () => {
+    it('should use the indent value defined on ctor options', () => {
       store = new Store('abc', { path: storePath, indent: 0 });
       store.set('foo', 'bar');
       assert.equal(store.json(), '{"foo":"bar"}')
