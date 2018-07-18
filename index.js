@@ -366,7 +366,10 @@ function mkdir(dirname, options = {}) {
   const opts = Object.assign({ cwd: process.cwd(), fs }, options);
   const mode = opts.mode || 0o777 & ~process.umask();
   const segs = path.relative(opts.cwd, dirname).split(path.sep);
-  const make = dir => fs.mkdirSync(dir, mode);
+  const make = dir => {
+    if (fs.existsSync(dir)) return;
+    fs.mkdirSync(dir, mode);
+  };
   for (let i = 0; i <= segs.length; i++) {
     try {
       make((dirname = path.join(opts.cwd, ...segs.slice(0, i))));
