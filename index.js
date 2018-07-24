@@ -33,17 +33,21 @@ class Store {
       name = options.name;
     }
 
-    assert.equal(typeof name, 'string', 'expected store name to be a string');
+    if (!options.path) {
+      assert.equal(typeof name, 'string', 'expected store name to be a string');
+    }
+
     let { debounce = 5, indent = 2, home, base } = options;
-    if (!base && options.cwd) base = options.cwd;
     this.name = name;
     this.options = options;
     this.defaults = defaults || options.default;
     this.debounce = debounce;
     this.indent = indent;
-    this.home = home || XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
-    this.base = base || path.join(this.home, 'data-store');
-    this.path = this.options.path || path.join(this.base, `${this.name}.json`);
+
+    if (!home) home = XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    if (!base) base = options.cwd || path.join(home, 'data-store');
+    this.path = this.options.path || path.join(base, `${this.name}.json`);
+    this.base = path.dirname(this.path);
     this.timeouts = {};
   }
 
@@ -366,7 +370,7 @@ function mkdir(dirname, options = {}) {
   const opts = Object.assign({ cwd: process.cwd(), fs }, options);
   const mode = opts.mode || 0o777 & ~process.umask();
   const segs = path.relative(opts.cwd, dirname).split(path.sep);
-  const make = dir => fs.mkdirSync(dir, mode);
+  const make = dir => !exists(dir, opts) && fs.mkdirSync(dir, mode);
   for (let i = 0; i <= segs.length; i++) {
     try {
       make((dirname = path.join(opts.cwd, ...segs.slice(0, i))));
@@ -375,6 +379,16 @@ function mkdir(dirname, options = {}) {
     }
   }
   return dirname;
+}
+
+function exists(dir, opts = {}) {
+  if (fs.existsSync(dir)) {
+    if (!opts.fs.statSync(dir).isDirectory()) {
+      throw new Error(`Path exists and is not a directory: "${dir}"`);
+    }
+    return true;
+  }
+  return false;
 }
 
 function handleError(dir, opts = {}) {
@@ -472,6 +486,8 @@ function hasOwn(data = {}, prop = '') {
 }
 
 function typeOf(val) {
+  if (val === null) return 'null';
+  if (val === void 0) return 'undefined';
   if (Array.isArray(val)) return 'array';
   if (typeof val === 'string') return 'string';
   if (val instanceof RegExp) return 'regexp';
