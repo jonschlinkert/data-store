@@ -127,9 +127,13 @@ class Store {
    * @api public
    */
 
-  get(key) {
+  get(key, fallback) {
     assert.equal(typeof key, 'string', 'expected key to be a string');
-    return get(this.data, key);
+    let value = get(this.data, key);
+    if (value === void 0) {
+      return fallback;
+    }
+    return value;
   }
 
   /**
@@ -200,7 +204,7 @@ class Store {
 
   del(key) {
     if (Array.isArray(key)) {
-      for (const k of key) this.del(k);
+      for (let k of key) this.del(k);
       return this;
     }
     assert.equal(typeof key, 'string', 'expected key to be a string');
@@ -270,7 +274,7 @@ class Store {
    */
 
   save() {
-    const write = this.writeFile.bind(this);
+    let write = this.writeFile.bind(this);
     if (!this.debounce) return write();
     if (this.timeouts.save) clearTimeout(this.timeouts.save);
     this.timeouts.save = setTimeout(write, this.debounce);
@@ -367,10 +371,10 @@ class Store {
 function mkdir(dirname, options = {}) {
   if (fs.existsSync(dirname)) return;
   assert.equal(typeof dirname, 'string', 'expected dirname to be a string');
-  const opts = Object.assign({ cwd: process.cwd(), fs }, options);
-  const mode = opts.mode || 0o777 & ~process.umask();
-  const segs = path.relative(opts.cwd, dirname).split(path.sep);
-  const make = dir => !exists(dir, opts) && fs.mkdirSync(dir, mode);
+  let opts = Object.assign({ cwd: process.cwd(), fs }, options);
+  let mode = opts.mode || 0o777 & ~process.umask();
+  let segs = path.relative(opts.cwd, dirname).split(path.sep);
+  let make = dir => !exists(dir, opts) && fs.mkdirSync(dir, mode);
   for (let i = 0; i <= segs.length; i++) {
     try {
       make((dirname = path.join(opts.cwd, ...segs.slice(0, i))));
@@ -395,7 +399,7 @@ function handleError(dir, opts = {}) {
   return err => {
     if (/null bytes/.test(err.message)) throw err;
 
-    const isIgnored = ['EEXIST', 'EISDIR', 'EPERM'].includes(err.code)
+    let isIgnored = ['EEXIST', 'EISDIR', 'EPERM'].includes(err.code)
       && opts.fs.statSync(dir).isDirectory()
       && path.dirname(dir) !== dir;
 
@@ -435,9 +439,9 @@ function del(data = {}, prop = '') {
     delete data[prop];
     return true;
   }
-  const segs = split(prop);
-  const last = segs.pop();
-  const val = segs.length ? get(data, segs.join('.')) : data;
+  let segs = split(prop);
+  let last = segs.pop();
+  let val = segs.length ? get(data, segs.join('.')) : data;
   if (isObject(val) && val.hasOwnProperty(last)) {
     delete val[last];
     return true;
@@ -445,7 +449,7 @@ function del(data = {}, prop = '') {
 }
 
 function split(str) {
-  const segs = str.split('.');
+  let segs = str.split('.');
   for (let i = 0; i < segs.length; i++) {
     while (segs[i] && segs[i].slice(-1) === '\\') {
       segs[i] = segs[i].slice(0, -1) + '.' + segs.splice(i + 1, 1);
@@ -460,7 +464,7 @@ function split(str) {
  */
 
 function cloneDeep(value) {
-  const obj = {};
+  let obj = {};
   switch (typeOf(value)) {
     case 'object':
       for (let key of Object.keys(value)) {
@@ -479,9 +483,9 @@ function hasOwn(data = {}, prop = '') {
   if (!prop) return false;
   if (data.hasOwnProperty(prop)) return true;
   if (prop.indexOf('.') === -1) return false;
-  const segs = split(prop);
-  const last = segs.pop();
-  const val = segs.length ? get(data, segs.join('.')) : data;
+  let segs = split(prop);
+  let last = segs.pop();
+  let val = segs.length ? get(data, segs.join('.')) : data;
   return isObject(val) && val.hasOwnProperty(last);
 }
 
@@ -489,12 +493,9 @@ function typeOf(val) {
   if (val === null) return 'null';
   if (val === void 0) return 'undefined';
   if (Array.isArray(val)) return 'array';
-  if (typeof val === 'string') return 'string';
+  if (val instanceof Error) return 'error';
   if (val instanceof RegExp) return 'regexp';
   if (val instanceof Date) return 'date';
-  if (val && typeof val === 'object') {
-    return 'object';
-  }
   return typeof val;
 }
 

@@ -1,8 +1,7 @@
 
-
 declare module 'data-store' {
   interface Options {
-    /* Milliseconds to delay writing the JSON file to the file system. This can make the store more performant by preventing multiple subsequent writes after calling .set or setting/getting store.data, but comes with the potential side effect that the config file will be outdated during the timeout. To get around this, use data-store's API to (re-)load the file instead of directly reading the file (using fs.readFile for example). */
+    /* Disabled by default. Milliseconds to delay writing the JSON file to the file system. This can make the store more performant by preventing multiple subsequent writes after calling .set or setting/getting store.data, but comes with the potential side effect that the config file will be outdated during the timeout. To get around this, use data-store's API to (re-)load the file instead of directly reading the file (using fs.readFile for example). */
     debounce?: number
     /* The indent value to pass to JSON.stringify() when writing the file to the fs, or when .json() is called */
     indent?: number | null
@@ -13,7 +12,7 @@ declare module 'data-store' {
     /* The directory to use for data-store config files. This value is joined to home */
     base?: string
     /* ... */
-    path?: string	
+    path?: string
   }
   interface DataObject {
     [key: string]: any
@@ -37,7 +36,7 @@ declare module 'data-store' {
     /**
      * Get the stored value of key.
      */
-    get: (key: string) => any
+    get: (key: string, fallback: any) => any
     /**
      * Returns true if the specified key has a value.
      */
