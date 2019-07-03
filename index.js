@@ -4,9 +4,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const assert = require('assert');
-const XDG_CONFIG_HOME = process.env.XDG_CONFIG_HOME;
-const flatten = (...args) => [].concat.apply([], args);
-const unique = arr => arr.filter((v, i) => arr.indexOf(v) === i);
+const xdg = require('@folder/xdg');
+const utils = require('./utils');
 
 /**
  * Initialize a new `Store` with the given `name`, `options` and `default` data.
@@ -37,18 +36,25 @@ class Store {
       assert.equal(typeof name, 'string', 'expected store name to be a string');
     }
 
-    let { debounce = 5, indent = 2, home, base } = options;
-    this.name = name;
+    let { debounce = 0, indent = 2, home, base, namespace } = options;
+    let dirs = xdg(options.xdg);
+
+    this.name = name || path.basename(options.path, path.extname(options.path));
     this.options = options;
     this.defaults = defaults || options.default;
     this.debounce = debounce;
+    this.namespace = namespace;
     this.indent = indent;
 
-    if (!home) home = XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    if (!home) home = dirs.config || path.join(dirs.home, '.config');
     if (!base) base = options.cwd || path.join(home, 'data-store');
     this.path = this.options.path || path.join(base, `${this.name}.json`);
     this.base = path.dirname(this.path);
     this.timeouts = {};
+  }
+
+  prop(key) {
+    return this.namespace ? `${this.namespace}.${key}` : key;
   }
 
   /**
@@ -72,11 +78,13 @@ class Store {
    */
 
   set(key, val) {
-    if (isObject(key)) {
-      Object.assign(this.data, key);
+    if (utils.isObject(key)) {
+      for (let k of Object.keys(key)) {
+        this.set(k.split(/\\?\./).join('\\.'), key[k]);
+      }
     } else {
       assert.equal(typeof key, 'string', 'expected key to be a string');
-      set(this.data, key, val);
+      utils.set(this.data, this.prop(key), val);
     }
     this.save();
     return this;
@@ -103,10 +111,9 @@ class Store {
 
   union(key, ...rest) {
     assert.equal(typeof key, 'string', 'expected key to be a string');
-    let arr = this.get(key);
-    if (arr == null) arr = [];
-    if (!Array.isArray(arr)) arr = [arr];
-    this.set(key, unique(flatten(...arr, ...rest)));
+    let values = this.get(key);
+    let arr = [].concat(utils.isEmptyPrimitive(values) ? [] : values);
+    this.set(key, utils.unique(utils.flatten(...arr, ...rest)));
     return this;
   }
 
@@ -129,7 +136,7 @@ class Store {
 
   get(key, fallback) {
     assert.equal(typeof key, 'string', 'expected key to be a string');
-    let value = get(this.data, key);
+    let value = utils.get(this.data, this.prop(key));
     if (value === void 0) {
       return fallback;
     }
@@ -154,8 +161,7 @@ class Store {
    */
 
   has(key) {
-    assert.equal(typeof key, 'string', 'expected key to be a string');
-    return typeof get(this.data, key) !== 'undefined';
+    return this.get(key) !== void 0;
   }
 
   /**
@@ -183,7 +189,7 @@ class Store {
 
   hasOwn(key) {
     assert.equal(typeof key, 'string', 'expected key to be a string');
-    return hasOwn(this.data, key);
+    return utils.hasOwn(this.data, this.prop(key));
   }
 
   /**
@@ -208,7 +214,7 @@ class Store {
       return this;
     }
     assert.equal(typeof key, 'string', 'expected key to be a string');
-    if (del(this.data, key)) {
+    if (utils.del(this.data, this.prop(key))) {
       this.save();
     }
     return this;
@@ -226,7 +232,11 @@ class Store {
    */
 
   clone() {
-    return cloneDeep(this.data);
+    if (this.namespace) {
+      let data = this.data[this.namespace];
+      return data ? utils.cloneDeep(data) : void 0;
+    }
+    return utils.cloneDeep(this.data);
   }
 
   /**
@@ -241,7 +251,11 @@ class Store {
    */
 
   clear() {
-    this.data = {};
+    if (this.namespace) {
+      this.data[this.namespace] = {};
+    } else {
+      this.data = {};
+    }
     this.save();
   }
 
@@ -293,7 +307,7 @@ class Store {
    */
 
   writeFile() {
-    mkdir(path.dirname(this.path), this.options.mkdir);
+    utils.mkdir(path.dirname(this.path), this.options.mkdir);
     fs.writeFileSync(this.path, this.json(), { mode: 0o0600 });
   }
 
@@ -310,7 +324,7 @@ class Store {
 
   unlink() {
     clearTimeout(this.timeouts.save);
-    tryUnlink(this.path);
+    utils.tryUnlink(this.path);
   }
 
   // DEPRECATED: will be removed in the next major release
@@ -351,160 +365,23 @@ class Store {
    * @return {object}
    */
 
-  set data(val) {
-    this._data = val;
+  set data(data) {
+    this._data = data;
     this.save();
   }
   get data() {
-    this._data = this._data || this.load();
+    let data = this._data || this.load();
     if (!this.saved) {
-      this._data = Object.assign({}, this.defaults, this._data);
+      data = { ...this.defaults, ...data };
     }
-    return this._data;
+    this._data = data;
+    return data;
   }
-}
-
-/**
- * Create a directory and any intermediate directories that might exist.
- */
-
-function mkdir(dirname, options = {}) {
-  if (fs.existsSync(dirname)) return;
-  assert.equal(typeof dirname, 'string', 'expected dirname to be a string');
-  let opts = Object.assign({ cwd: process.cwd(), fs }, options);
-  let mode = opts.mode || 0o777 & ~process.umask();
-  let segs = path.relative(opts.cwd, dirname).split(path.sep);
-  let make = dir => !exists(dir, opts) && fs.mkdirSync(dir, mode);
-  for (let i = 0; i <= segs.length; i++) {
-    try {
-      make((dirname = path.join(opts.cwd, ...segs.slice(0, i))));
-    } catch (err) {
-      handleError(dirname, opts)(err);
-    }
-  }
-  return dirname;
-}
-
-function exists(dir, opts = {}) {
-  if (fs.existsSync(dir)) {
-    if (!opts.fs.statSync(dir).isDirectory()) {
-      throw new Error(`Path exists and is not a directory: "${dir}"`);
-    }
-    return true;
-  }
-  return false;
-}
-
-function handleError(dir, opts = {}) {
-  return err => {
-    if (/null bytes/.test(err.message)) throw err;
-
-    let isIgnored = ['EEXIST', 'EISDIR', 'EPERM'].includes(err.code)
-      && opts.fs.statSync(dir).isDirectory()
-      && path.dirname(dir) !== dir;
-
-    if (!isIgnored) {
-      throw err;
-    }
-  };
-}
-
-function tryUnlink(filepath) {
-  try {
-    fs.unlinkSync(filepath);
-  } catch (err) {
-    if (err.code !== 'ENOENT') {
-      throw err;
-    }
-  }
-}
-
-function get(data = {}, prop = '') {
-  return data[prop] == null
-    ? split(prop).reduce((acc, k) => acc && acc[k], data)
-    : data[prop];
-}
-
-function set(data = {}, prop = '', val) {
-  return split(prop).reduce((acc, k, i, arr) => {
-    let value = arr.length - 1 > i ? (acc[k] || {}) : val;
-    if (!isObject(value) && i < arr.length - 1) value = {};
-    return (acc[k] = value);
-  }, data);
-}
-
-function del(data = {}, prop = '') {
-  if (!prop) return false;
-  if (data.hasOwnProperty(prop)) {
-    delete data[prop];
-    return true;
-  }
-  let segs = split(prop);
-  let last = segs.pop();
-  let val = segs.length ? get(data, segs.join('.')) : data;
-  if (isObject(val) && val.hasOwnProperty(last)) {
-    delete val[last];
-    return true;
-  }
-}
-
-function split(str) {
-  let segs = str.split('.');
-  for (let i = 0; i < segs.length; i++) {
-    while (segs[i] && segs[i].slice(-1) === '\\') {
-      segs[i] = segs[i].slice(0, -1) + '.' + segs.splice(i + 1, 1);
-    }
-  }
-  return segs;
-}
-
-/**
- * Deeply clone plain objects and arrays. We're only concerned with
- * cloning values that are valid in JSON.
- */
-
-function cloneDeep(value) {
-  let obj = {};
-  switch (typeOf(value)) {
-    case 'object':
-      for (let key of Object.keys(value)) {
-        obj[key] = cloneDeep(value[key]);
-      }
-      return obj;
-    case 'array':
-      return value.map(ele => cloneDeep(ele));
-    default: {
-      return value;
-    }
-  }
-}
-
-function hasOwn(data = {}, prop = '') {
-  if (!prop) return false;
-  if (data.hasOwnProperty(prop)) return true;
-  if (prop.indexOf('.') === -1) return false;
-  let segs = split(prop);
-  let last = segs.pop();
-  let val = segs.length ? get(data, segs.join('.')) : data;
-  return isObject(val) && val.hasOwnProperty(last);
-}
-
-function typeOf(val) {
-  if (val === null) return 'null';
-  if (val === void 0) return 'undefined';
-  if (Array.isArray(val)) return 'array';
-  if (val instanceof Error) return 'error';
-  if (val instanceof RegExp) return 'regexp';
-  if (val instanceof Date) return 'date';
-  return typeof val;
-}
-
-function isObject(val) {
-  return typeOf(val) === 'object';
 }
 
 /**
  * Expose `Store`
  */
 
-module.exports = Store;
+module.exports = (...args) => new Store(...args)
+module.exports.Store = Store;

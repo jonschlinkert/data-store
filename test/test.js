@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const del = require('delete');
 const assert = require('assert');
-const Store = require('..');
+const dataStore = require('..');
 const tests = (...args) => path.resolve(__dirname, ...args);
 const storePath = tests('fixtures/tests.json');
 del.sync(storePath);
@@ -14,7 +14,7 @@ let store;
 describe('store', () => {
   beforeEach(() => {
     assert(!fs.existsSync(storePath));
-    store = new Store({ name: 'abc', path: storePath, debounce: 0 });
+    store = dataStore({ name: 'abc', path: storePath, debounce: 0 });
   });
 
   afterEach(() => store.unlink());
@@ -26,7 +26,7 @@ describe('store', () => {
 
   describe('create', () => {
     it('should create an instance of Store', () => {
-      assert(store instanceof Store);
+      assert(store instanceof dataStore.Store);
     });
 
     it('should initialize store', cb => {
@@ -70,7 +70,7 @@ describe('store', () => {
 
     it('should initialize a store with the given defaults', () => {
       const defaults = { foo: 'bar', baz: 'qux' };
-      store = new Store('abc', { path: storePath }, defaults);
+      store = dataStore('abc', { path: storePath }, defaults);
       assert.equal(store.get('foo'), 'bar');
       assert.equal(store.get('baz'), 'qux');
     });
@@ -278,7 +278,7 @@ describe('store', () => {
 
   describe('json', () => {
     it('should use the indent value defined on ctor options', () => {
-      store = new Store('abc', { path: storePath, indent: 0 });
+      store = dataStore('abc', { path: storePath, indent: 0 });
       store.set('foo', 'bar');
       assert.equal(store.json(), '{"foo":"bar"}')
     });
