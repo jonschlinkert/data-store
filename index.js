@@ -78,6 +78,10 @@ class Store {
    */
 
   set(key, val) {
+    if (typeof key === 'string' && val === void 0) {
+      return this.del(key);
+    }
+
     if (utils.isObject(key)) {
       for (let k of Object.keys(key)) {
         this.set(k.split(/\\?\./).join('\\.'), key[k]);
