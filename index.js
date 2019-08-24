@@ -128,6 +128,7 @@ class Store {
    */
 
   get(key, fallback) {
+	if (typeof key === 'undefined') return this.data;
     assert.equal(typeof key, 'string', 'expected key to be a string');
     let value = get(this.data, key);
     if (value === void 0) {
