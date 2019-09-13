@@ -1,7 +1,7 @@
 {
   "name": "data-store",
   "description": "Easily persist and load config data. No dependencies.",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "homepage": "https://github.com/jonschlinkert/data-store",
   "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
   "contributors": [
