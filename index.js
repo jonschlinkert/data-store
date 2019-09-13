@@ -44,9 +44,9 @@ class Store {
     }
 
     const opts = { debounce: 0, indent: 2, home: os.homedir(), name, ...options };
-    const file = opts.name || (opts.path ? utils.stem(opts.path) : 'data-store');
 
-    this.path = opts.path || path.join(opts.home, `${file}.json`);
+    this.name = opts.name || (opts.path ? utils.stem(opts.path) : 'data-store')
+    this.path = opts.path || path.join(opts.home, `${this.name}.json`);
     this.indent = opts.indent;
     this.debounce = opts.debounce;
     this.defaults = defaults || opts.default;
@@ -374,5 +374,8 @@ class Store {
  * Expose `Store`
  */
 
-module.exports = (...args) => new Store(...args);
+module.exports = function(...args) {
+  return new Store(...args);
+};
+
 module.exports.Store = Store;
