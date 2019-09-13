@@ -162,7 +162,7 @@ describe('store', () => {
     it('should return true if a key exists', () => {
       store.set('foo', 'bar');
       store.set('baz', null);
-      store.set('qux', undefined);
+      store.set('qux', 5);
 
       assert(!store.hasOwn('bar'));
       assert(store.hasOwn('foo'));
@@ -173,11 +173,27 @@ describe('store', () => {
     it('should work with escaped keys', () => {
       store.set('foo\\.baz', 'bar');
       store.set('baz', null);
-      store.set('qux', undefined);
+      store.set('qux', 5);
 
       assert(!store.hasOwn('foo'));
       assert(!store.hasOwn('bar'));
       assert(store.hasOwn('foo.baz'));
+      assert(store.hasOwn('baz'));
+      assert(store.hasOwn('qux'));
+
+      store.set('foo\\.bar.baz\\.qux', 'fez');
+      assert(store.hasOwn('foo\\.bar.baz\\.qux'));
+    });
+
+    it('should not mistake double backslashes for escaped keys', () => {
+      store.set('foo\\\\.baz', 'bar');
+      store.set('baz', null);
+      store.set('qux', 5);
+
+      assert(!store.hasOwn('foo'));
+      assert(!store.hasOwn('bar'));
+      assert(!store.hasOwn('foo.baz'));
+      assert(!store.hasOwn('foo\\'));
       assert(store.hasOwn('baz'));
       assert(store.hasOwn('qux'));
 

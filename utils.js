@@ -3,9 +3,10 @@
 const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
+const get = require('get-value');
 
 const split = str => {
-  let segs = str.split('.');
+  const segs = str.split('.');
   for (let i = 0; i < segs.length; i++) {
     while (segs[i] && segs[i].slice(-1) === '\\') {
       segs[i] = segs[i].slice(0, -1) + '.' + segs.splice(i + 1, 1);
@@ -14,40 +15,13 @@ const split = str => {
   return segs;
 };
 
+exports.stem = filepath => path.basename(filepath, path.extname(filepath));
+
 exports.flatten = (...args) => [].concat.apply([], args);
 exports.unique = arr => arr.filter((ele, i) => arr.indexOf(ele) === i);
 
 exports.isEmptyPrimitive = value => {
   return value === '' || value === void 0 || value === null;
-};
-
-/**
- * Set a value on the given object.
- * @param {Object} obj
- * @param {String} prop
- * @param {any} value
- */
-
-exports.set = (obj = {}, prop = '', val) => {
-  return split(prop).reduce((acc, k, i, arr) => {
-    let value = arr.length - 1 > i ? (acc[k] || {}) : val;
-    if (!exports.isObject(value) && i < arr.length - 1) value = {};
-    return (acc[k] = value);
-  }, obj);
-};
-
-/**
- * Get a value from the given object.
- * @param {Object} obj
- * @param {String} prop
- */
-
-exports.get = (obj = {}, prop = '', fallback) => {
-  let segs = split(prop);
-  let value = obj[prop] === void 0
-    ? segs.reduce((acc, k, i) => acc && acc[k], obj)
-    : obj[prop];
-  return value === void 0 ? fallback : value;
 };
 
 exports.del = (obj = {}, prop = '') => {
@@ -56,9 +30,9 @@ exports.del = (obj = {}, prop = '') => {
     delete obj[prop];
     return true;
   }
-  let segs = split(prop);
-  let last = segs.pop();
-  let val = segs.length ? exports.get(obj, segs.join('.')) : obj;
+  const segs = split(prop);
+  const last = segs.pop();
+  const val = segs.length ? get(obj, segs.join('.')) : obj;
   if (exports.isObject(val) && val.hasOwnProperty(last)) {
     delete val[last];
     return true;
@@ -68,10 +42,10 @@ exports.del = (obj = {}, prop = '') => {
 exports.hasOwn = (obj = {}, prop = '') => {
   if (!prop) return false;
   if (obj.hasOwnProperty(prop)) return true;
-  let segs = split(prop);
-  let last = segs.pop();
+  const segs = split(prop);
+  const last = segs.pop();
   if (!segs.length) return false;
-  let val = exports.get(obj, segs.join('.'));
+  const val = get(obj, segs.join('.'));
   return exports.isObject(val) && val.hasOwnProperty(last);
 };
 
@@ -81,10 +55,10 @@ exports.hasOwn = (obj = {}, prop = '') => {
  */
 
 exports.cloneDeep = value => {
-  let obj = {};
+  const obj = {};
   switch (exports.typeOf(value)) {
     case 'object':
-      for (let key of Object.keys(value)) {
+      for (const key of Object.keys(value)) {
         obj[key] = exports.cloneDeep(value[key]);
       }
       return obj;
@@ -126,7 +100,7 @@ exports.mkdir = (dirname, options = {}) => {
 };
 
 exports.directoryExists = (dirname, strict = true) => {
-  let stat = exports.tryStat(dirname);
+  const stat = exports.tryStat(dirname);
   if (stat) {
     if (strict && !stat.isDirectory()) {
       throw new Error(`Path exists and is not a directory: "${dirname}"`);
@@ -139,7 +113,7 @@ exports.directoryExists = (dirname, strict = true) => {
 exports.handleError = (dirname, err, options = {}) => {
   if (/null bytes/.test(err.message)) throw err;
 
-  let isIgnored = ['EEXIST', 'EISDIR', 'EPERM'].includes(err.code)
+  const isIgnored = ['EEXIST', 'EISDIR', 'EPERM'].includes(err.code)
     && options.fs.statSync(dirname).isDirectory()
     && path.dirname(dirname) !== dirname;
 

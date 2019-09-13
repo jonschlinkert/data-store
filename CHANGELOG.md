@@ -32,6 +32,13 @@ Changelog entries are classified using the following labels _(from [keep-a-chang
 
 </details>
 
+## [4.0.0] - 2019-07-03
+
+**Changed**
+
+- the main export is now a function instead of a class, but this should not be a breaking change as you can still do `new` with any function. See [#19](https://github.com/jonschlinkert/data-store/issues/19)
+- updated `mkdir` util to use native `fs.mkdir`, now that it supports recursion.
+
 ## [3.0.3] - 2017-05-22
 
 - Improvements to debounce for `.save()`
@@ -278,4 +285,3 @@ Changelog entries are classified using the following labels _(from [keep-a-chang
 [0.3.0]: https://github.com/jonschlinkert/data-store/compare/0.2.0...0.3.0
 
 [keep-a-changelog]: https://github.com/olivierlacan/keep-a-changelog
-

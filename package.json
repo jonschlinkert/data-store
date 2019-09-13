@@ -25,10 +25,14 @@
   "scripts": {
     "test": "mocha"
   },
+  "dependencies": {
+    "get-value": "^3.0.1",
+    "set-value": "^3.0.1"
+  },
   "devDependencies": {
     "delete": "^1.1.0",
-    "gulp-format-md": "^1.0.0",
-    "mocha": "^5.2.0"
+    "gulp-format-md": "^2.0.0",
+    "mocha": "^6.2.0"
   },
   "keywords": [
     "app",
@@ -43,10 +47,13 @@
     "has-own",
     "hash",
     "json",
+    "kv",
+    "key-value",
     "local",
     "object",
     "options",
     "own",
+    "persist",
     "save",
     "set",
     "storage",

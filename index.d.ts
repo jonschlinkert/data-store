@@ -7,6 +7,8 @@ declare module 'data-store' {
     indent?: number | null
     /* The name to use for the store file stem (name + '.json' is the store's file name) */
     name?: string
+    /* An optional property name to nest all values under. */
+    namespace?: string
     /* The root home directory to use */
     home?: string
     /* The directory to use for persisting data-store config files. This value is joined to home */

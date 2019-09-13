@@ -1,11 +1,18 @@
 'use strict';
 
+const kData = Symbol('data-store');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const assert = require('assert');
-const xdg = require('@folder/xdg');
 const utils = require('./utils');
+
+/**
+ * Module dependencies
+ */
+
+const get = require('get-value');
+const set = require('set-value');
 
 /**
  * Initialize a new `Store` with the given `name`, `options` and `default` data.
@@ -18,7 +25,7 @@ const utils = require('./utils');
  * //=> './test/fixtures/abc.json'
  * ```
  * @name Store
- * @param {string} `name` Store name to use for the basename of the `.json` file.
+ * @param {String} `name` Store name to use for the basename of the `.json` file.
  * @param {object} `options` See all [available options](#options).
  * @param {object} `defaults` An object to initialize the store with.
  * @api public
@@ -36,25 +43,14 @@ class Store {
       assert.equal(typeof name, 'string', 'expected store name to be a string');
     }
 
-    let { debounce = 0, indent = 2, home, base, namespace } = options;
-    let dirs = xdg(options.xdg);
+    const opts = { debounce: 0, indent: 2, home: os.homedir(), name, ...options };
+    const file = opts.name || (opts.path ? utils.stem(opts.path) : 'data-store');
 
-    this.name = name || path.basename(options.path, path.extname(options.path));
-    this.options = options;
-    this.defaults = defaults || options.default;
-    this.debounce = debounce;
-    this.namespace = namespace;
-    this.indent = indent;
-
-    if (!home) home = dirs.config || path.join(dirs.home, '.config');
-    if (!base) base = options.cwd || path.join(home, 'data-store');
-    this.path = this.options.path || path.join(base, `${this.name}.json`);
-    this.base = path.dirname(this.path);
+    this.path = opts.path || path.join(opts.home, `${file}.json`);
+    this.indent = opts.indent;
+    this.debounce = opts.debounce;
+    this.defaults = defaults || opts.default;
     this.timeouts = {};
-  }
-
-  prop(key) {
-    return this.namespace ? `${this.namespace}.${key}` : key;
   }
 
   /**
@@ -71,25 +67,26 @@ class Store {
    * //=> {a: 'b'}
    * ```
    * @name .set
-   * @param {string} `key`
+   * @param {String} `key`
    * @param {any} `val` The value to save to `key`. Must be a valid JSON type: String, Number, Array or Object.
-   * @return {object} `Store` for chaining
+   * @return {Object} `Store` for chaining
    * @api public
    */
 
   set(key, val) {
-    if (typeof key === 'string' && val === void 0) {
+    if (typeof key === 'string' && typeof val === 'undefined') {
       return this.del(key);
     }
 
     if (utils.isObject(key)) {
-      for (let k of Object.keys(key)) {
+      for (const k of Object.keys(key)) {
         this.set(k.split(/\\?\./).join('\\.'), key[k]);
       }
     } else {
       assert.equal(typeof key, 'string', 'expected key to be a string');
-      utils.set(this.data, this.prop(key), val);
+      set(this.data, key, val);
     }
+
     this.save();
     return this;
   }
@@ -107,17 +104,17 @@ class Store {
    * //=> ['b', 'c', 'd']
    * ```
    * @name .union
-   * @param  {string} `key`
+   * @param  {String} `key`
    * @param  {any} `val` The value to union to `key`. Must be a valid JSON type: String, Number, Array or Object.
-   * @return {object} `Store` for chaining
+   * @return {Object} `Store` for chaining
    * @api public
    */
 
   union(key, ...rest) {
     assert.equal(typeof key, 'string', 'expected key to be a string');
-    let values = this.get(key);
-    let arr = [].concat(utils.isEmptyPrimitive(values) ? [] : values);
-    this.set(key, utils.unique(utils.flatten(...arr, ...rest)));
+    const vals = this.get(key);
+    const values = [].concat(utils.isEmptyPrimitive(vals) ? [] : vals);
+    this.set(key, utils.unique(utils.flatten(...values, ...rest)));
     return this;
   }
 
@@ -133,15 +130,15 @@ class Store {
    * //=> {a: {b: 'c'}}
    * ```
    * @name .get
-   * @param {string} `key`
+   * @param {String} `key`
    * @return {any} The value to store for `key`.
    * @api public
    */
 
   get(key, fallback) {
     assert.equal(typeof key, 'string', 'expected key to be a string');
-    let value = utils.get(this.data, this.prop(key));
-    if (value === void 0) {
+    const value = get(this.data, key);
+    if (typeof value === 'undefined') {
       return fallback;
     }
     return value;
@@ -159,13 +156,13 @@ class Store {
    * store.has('d'); //=> false
    * ```
    * @name .has
-   * @param {string} `key`
-   * @return {boolean} Returns true if `key` has
+   * @param {String} `key`
+   * @return {Boolean} Returns true if `key` has
    * @api public
    */
 
   has(key) {
-    return this.get(key) !== void 0;
+    return typeof this.get(key) !== 'undefined';
   }
 
   /**
@@ -186,14 +183,14 @@ class Store {
    * store.hasOwn('foo'); //=> false
    * ```
    * @name .hasOwn
-   * @param {string} `key`
-   * @return {boolean} Returns true if `key` exists
+   * @param {String} `key`
+   * @return {Boolean} Returns true if `key` exists
    * @api public
    */
 
   hasOwn(key) {
     assert.equal(typeof key, 'string', 'expected key to be a string');
-    return utils.hasOwn(this.data, this.prop(key));
+    return utils.hasOwn(this.data, key);
   }
 
   /**
@@ -208,17 +205,18 @@ class Store {
    * console.log(store.data); //=> {}
    * ```
    * @name .del
-   * @param {string|Array} `keys` One or more properties to delete.
+   * @param {String|Array} `keys` One or more properties to delete.
    * @api public
    */
 
   del(key) {
     if (Array.isArray(key)) {
-      for (let k of key) this.del(k);
+      for (const k of key) this.del(k);
       return this;
     }
-    assert.equal(typeof key, 'string', 'expected key to be a string');
-    if (utils.del(this.data, this.prop(key))) {
+
+    assert.equal(typeof key, 'string', 'expected key to be a string, use .clear() to delete all properties');
+    if (utils.del(this.data, key)) {
       this.save();
     }
     return this;
@@ -231,15 +229,11 @@ class Store {
    * console.log(store.clone());
    * ```
    * @name .clone
-   * @return {object}
+   * @return {Object}
    * @api public
    */
 
   clone() {
-    if (this.namespace) {
-      let data = this.data[this.namespace];
-      return data ? utils.cloneDeep(data) : void 0;
-    }
     return utils.cloneDeep(this.data);
   }
 
@@ -255,11 +249,7 @@ class Store {
    */
 
   clear() {
-    if (this.namespace) {
-      this.data[this.namespace] = {};
-    } else {
-      this.data = {};
-    }
+    this.data = {};
     this.save();
   }
 
@@ -270,12 +260,31 @@ class Store {
    * console.log(store.json(null, 2));
    * ```
    * @name .json
-   * @return {string}
+   * @param {Function} `replacer` Replacer function.
+   * @param {String} `indent` Indentation to use. Default is 2 spaces.
+   * @return {String}
    * @api public
    */
 
-  json(replacer = null, space = this.indent) {
-    return JSON.stringify(this.data, replacer, space);
+  json(replacer = null, indent = this.indent) {
+    return JSON.stringify(this.data, replacer, indent);
+  }
+
+  /**
+   * Immediately write the store to the file system. This method should probably
+   * not be called directly. Unless you are familiar with the inner workings of
+   * the code it's recommended that you use .save() instead.
+   *
+   * ```js
+   * store.writeFile();
+   * ```
+   * @name .writeFile
+   * @return {undefined}
+   */
+
+  writeFile() {
+    utils.mkdir(path.dirname(this.path));
+    fs.writeFileSync(this.path, this.json(), { mode: 0o0600 });
   }
 
   /**
@@ -292,27 +301,9 @@ class Store {
    */
 
   save() {
-    let write = this.writeFile.bind(this);
-    if (!this.debounce) return write();
+    if (!this.debounce) return this.writeFile();
     if (this.timeouts.save) clearTimeout(this.timeouts.save);
-    this.timeouts.save = setTimeout(write, this.debounce);
-  }
-
-  /**
-   * Immediately write the store to the file system. This method should probably
-   * not be called directly. Unless you are familiar with the inner workings of
-   * the code it's recommended that you use .save() instead.
-   *
-   * ```js
-   * store.writeFile();
-   * ```
-   * @name .writeFile
-   * @return {undefined}
-   */
-
-  writeFile() {
-    utils.mkdir(path.dirname(this.path), this.options.mkdir);
-    fs.writeFileSync(this.path, this.json(), { mode: 0o0600 });
+    this.timeouts.save = setTimeout(this.writeFile.bind(this), this.debounce);
   }
 
   /**
@@ -331,26 +322,22 @@ class Store {
     utils.tryUnlink(this.path);
   }
 
-  // DEPRECATED: will be removed in the next major release
-  deleteFile() {
-    return this.unlink();
-  }
-
   /**
    * Load the store.
-   * @return {object}
+   * @return {Object}
    */
 
   load() {
     try {
-      return (this._data = JSON.parse(fs.readFileSync(this.path)));
+      return (this[kData] = JSON.parse(fs.readFileSync(this.path)));
     } catch (err) {
       if (err.code === 'EACCES') {
         err.message += '\ndata-store does not have permission to load this file\n';
         throw err;
       }
+      // (re-)initialize if file doesn't exist or is corrupted
       if (err.code === 'ENOENT' || err.name === 'SyntaxError') {
-        this._data = {};
+        this[kData] = {};
         return {};
       }
     }
@@ -366,19 +353,19 @@ class Store {
    * console.log(store.get('foo')); //=> 'bar'
    * ```
    * @name .data
-   * @return {object}
+   * @return {Object}
    */
 
   set data(data) {
-    this._data = data;
+    this[kData] = data;
     this.save();
   }
   get data() {
-    let data = this._data || this.load();
+    let data = this[kData] || this.load();
     if (!this.saved) {
       data = { ...this.defaults, ...data };
     }
-    this._data = data;
+    this[kData] = data;
     return data;
   }
 }
@@ -387,5 +374,5 @@ class Store {
  * Expose `Store`
  */
 
-module.exports = (...args) => new Store(...args)
+module.exports = (...args) => new Store(...args);
 module.exports.Store = Store;
