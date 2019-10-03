@@ -101,6 +101,26 @@ describe('store', () => {
     });
   });
 
+  describe('append', () => {
+    it('should allow adding to an existing map', () => {
+      store.append('a', { b : 'c' });
+      store.append('d', { e : 'f' });
+      store.set('g', { h : 'i' });
+      assert.equal(store.data.a.b, 'c');
+      assert.equal(store.data.d.e, 'f');
+      assert.equal(store.data.g.h, 'i');
+    });
+    it('should allow overriding an existing key in an existing map', () => {
+      store.append('a', { b : 'c' });
+      store.append('d', { e : 'f' });
+      store.set('g', { h : 'i' });
+      store.append('d', { e : 'j' });
+      assert.equal(store.data.a.b, 'c');
+      assert.equal(store.data.d.e, 'j');
+      assert.equal(store.data.g.h, 'i');
+    });
+  });
+
   describe('union', () => {
     it('should add and arrayify a new value', () => {
       store.union('one', 'two');

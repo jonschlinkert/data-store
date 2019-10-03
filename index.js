@@ -45,12 +45,20 @@ class Store {
 
     const opts = { debounce: 0, indent: 2, home: os.homedir(), name, ...options };
 
-    this.name = opts.name || (opts.path ? utils.stem(opts.path) : 'data-store')
+    this.name = opts.name || (opts.path ? utils.stem(opts.path) : 'data-store');
     this.path = opts.path || path.join(opts.home, `${this.name}.json`);
     this.indent = opts.indent;
     this.debounce = opts.debounce;
     this.defaults = defaults || opts.default;
     this.timeouts = {};
+
+    // Allow override of read and write methods
+    if (typeof options.readParseFile == "function") {
+      this.readParseFile = options.readParseFile;
+    }
+    if (typeof options.writeFile == "function") {
+      this.writeFile = options.writeFile;
+    }
   }
 
   /**
@@ -89,6 +97,29 @@ class Store {
 
     this.save();
     return this;
+  }
+
+  /**
+   * Assign `value` to `key` while retaining prior members of `value` if
+   * `value` is a map.
+   *
+   * ```js
+   * store.set('a', { b: c });
+   * //=> {a: { b: c }}
+   *
+   * store.append('a', { d: e });
+   * //=> {a: { b: c, d: e }}
+   * ```
+   *
+   * @name .append
+   * @param {String} `key`
+   * @param {any} `val` The value to append to `key`. Must be a valid JSON type: String, Number, Array or Object.
+   * @return {Object} `Store` for chaining
+   * @api public
+   */
+
+  append(key, val) {
+    return this.set(key, Object.assign(this.get(key) || {}, val));
   }
 
   /**
@@ -324,13 +355,29 @@ class Store {
   }
 
   /**
+   * Read and parse the data from the file system store. This method should
+   * probably not be called directly. Unless you are familiar with the inner
+   * workings of the code it's recommended that you use .load() instead.
+   *
+   * ```js
+   * data = store.readPraseFile();
+   * ```
+   * @name .readParseFile
+   * @return {undefined}
+   */
+
+  readParseFile() {
+    return JSON.parsefs.readFileSync(this.path);
+  }
+
+  /**
    * Load the store.
    * @return {Object}
    */
 
   load() {
     try {
-      return (this[kData] = JSON.parse(fs.readFileSync(this.path)));
+      return (this[kData] = this.readParseFile());
     } catch (err) {
       if (err.code === 'EACCES') {
         err.message += '\ndata-store does not have permission to load this file\n';
