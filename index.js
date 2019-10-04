@@ -101,25 +101,35 @@ class Store {
 
   /**
    * Assign `value` to `key` while retaining prior members of `value` if
-   * `value` is a map.
+   * `value` is a map. If `value` is not a map, overwrites like `.set`.
    *
    * ```js
    * store.set('a', { b: c });
    * //=> {a: { b: c }}
    *
-   * store.append('a', { d: e });
+   * store.merge('a', { d: e });
    * //=> {a: { b: c, d: e }}
+   *
+   * store.set('a', 'b');
+   * //=> {a: 'b'}
+   *
+   * store.merge('a', { c : 'd' });
+   * //=> {a: { c : 'd' }}
    * ```
    *
-   * @name .append
+   * @name .merge
    * @param {String} `key`
-   * @param {any} `val` The value to append to `key`. Must be a valid JSON type: String, Number, Array or Object.
+   * @param {any} `val` The value to merge to `key`. Must be a valid JSON type: String, Number, Array or Object.
    * @return {Object} `Store` for chaining
    * @api public
    */
 
-  append(key, val) {
-    return this.set(key, Object.assign(this.get(key) || {}, val));
+  merge(key, val) {
+    let oldVal = this.get(key);
+    if (oldVal && typeof oldVal == "object" && ! Array.isArray(oldVal)) {
+      val = Object.assign(this.get(key), val);
+    }
+    return this.set(key, val);
   }
 
   /**
@@ -367,7 +377,7 @@ class Store {
    */
 
   readParseFile() {
-    return JSON.parsefs.readFileSync(this.path);
+    return JSON.parse(fs.readFileSync(this.path));
   }
 
   /**

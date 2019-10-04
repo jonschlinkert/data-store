@@ -39,8 +39,8 @@ const store = new Store(
     readParseFile: readParseFile
   });
 
-store.append("section 1", { a : 'b' });
-store.append("section 1", { c : 'd' });
+store.merge("section 1", { a : 'b' });
+store.merge("section 1", { c : 'd' });
 store.set("section 2", { e : 'f' });
 console.log(store.data);
 
