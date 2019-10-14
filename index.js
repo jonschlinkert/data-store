@@ -53,10 +53,10 @@ class Store {
     this.timeouts = {};
 
     // Allow override of read and write methods
-    if (typeof options.readParseFile == "function") {
+    if (typeof options.readParseFile === 'function') {
       this.readParseFile = options.readParseFile;
     }
-    if (typeof options.writeFile == "function") {
+    if (typeof options.writeFile === 'function') {
       this.writeFile = options.writeFile;
     }
   }
@@ -126,7 +126,7 @@ class Store {
 
   merge(key, val) {
     let oldVal = this.get(key);
-    if (oldVal && typeof oldVal == "object" && ! Array.isArray(oldVal)) {
+    if (oldVal && typeof oldVal === 'object' && !Array.isArray(oldVal)) {
       val = Object.assign(this.get(key), val);
     }
     return this.set(key, val);
@@ -373,7 +373,7 @@ class Store {
    * data = store.readPraseFile();
    * ```
    * @name .readParseFile
-   * @return {undefined}
+   * @return {Object}
    */
 
   readParseFile() {

@@ -1,12 +1,12 @@
-const fs = require("fs");
-const ini = require("ini");
+const fs = require('fs');
+const ini = require('ini');
 const utils = require('../utils');
 const path = require('path');
 const Store = require('../');
 
 // Will be called in context of store
 function writeFile() {
-  console.log("writeFile");
+  console.log('writeFile');
   utils.mkdir(path.dirname(this.path));
   fs.writeFileSync(this.path, ini.stringify(this.data), { mode: 0o0600 });
 }
@@ -15,13 +15,10 @@ function writeFile() {
 function readParseFile() {
   let data;
   
-  console.log("readParseFile");
-  try
-  {
+  console.log('readParseFile');
+  try {
     data = fs.readFileSync(this.path, "utf-8");
-  }
-  catch (e)
-  {
+  } catch (e) {
     console.log(`readParseFile error; starting with empty data`);
     data = {};
   }
@@ -39,9 +36,9 @@ const store = new Store(
     readParseFile: readParseFile
   });
 
-store.merge("section 1", { a : 'b' });
-store.merge("section 1", { c : 'd' });
-store.set("section 2", { e : 'f' });
+store.merge('section 1', { a : 'b' });
+store.merge('section 1', { c : 'd' });
+store.set('section 2', { e : 'f' });
 console.log(store.data);
 
 //store.unlink();
