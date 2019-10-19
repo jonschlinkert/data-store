@@ -1,4 +1,4 @@
-lconst fs = require('fs');
+const fs = require('fs');
 const ini = require('ini');
 const utils = require('../utils');
 const path = require('path');
