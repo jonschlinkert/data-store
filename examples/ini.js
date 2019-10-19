@@ -1,4 +1,4 @@
-const fs = require('fs');
+lconst fs = require('fs');
 const ini = require('ini');
 const utils = require('../utils');
 const path = require('path');
@@ -17,9 +17,9 @@ function readParseFile() {
   
   console.log('readParseFile');
   try {
-    data = fs.readFileSync(this.path, "utf-8");
+    data = fs.readFileSync(this.path, 'utf-8');
   } catch (e) {
-    console.log(`readParseFile error; starting with empty data`);
+    console.log('readParseFile error; starting with empty data');
     data = {};
   }
 
@@ -27,14 +27,12 @@ function readParseFile() {
   return ini.parse(data);
 }
 
-const store = new Store(
-  'app',
-  {
-    path: __dirname + '/data.ini',
-    debounce: 10,
-    writeFile: writeFile,
-    readParseFile: readParseFile
-  });
+const store = new Store('app', {
+  path: __dirname + '/data.ini',
+  debounce: 10,
+  writeFile: writeFile,
+  readParseFile: readParseFile
+});
 
 store.merge('section 1', { a : 'b' });
 store.merge('section 1', { c : 'd' });
