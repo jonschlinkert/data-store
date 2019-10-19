@@ -101,6 +101,33 @@ describe('store', () => {
     });
   });
 
+  describe('merge', () => {
+    it('should allow adding to an existing map', () => {
+      store.merge('a', { b : 'c' });
+      store.merge('d', { e : 'f' });
+      store.set('g', { h : 'i' });
+      assert.equal(store.data.a.b, 'c');
+      assert.equal(store.data.d.e, 'f');
+      assert.equal(store.data.g.h, 'i');
+    });
+
+    it('should allow overriding an existing key in an existing map', () => {
+      store.merge('a', { b : 'c' });
+      store.merge('d', { e : 'f' });
+      store.set('g', { h : 'i' });
+      store.merge('d', { e : 'j' });
+      assert.equal(store.data.a.b, 'c');
+      assert.equal(store.data.d.e, 'j');
+      assert.equal(store.data.g.h, 'i');
+    });
+
+    it('should just overwrite if merge to non-object', () => {
+      store.set('a', 'b');
+      store.merge('a', { c : 'd' });
+      assert.equal(store.data.a.c, 'd');
+    });
+  });
+
   describe('union', () => {
     it('should add and arrayify a new value', () => {
       store.union('one', 'two');
