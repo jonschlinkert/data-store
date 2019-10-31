@@ -17,9 +17,7 @@ declare module 'data-store' {
     path?: string
   }
 
-  interface DataObject {
-    [key: string]: any
-  }
+  type DataObject = Record<string, any>;
 
   /**
    * Initialize a new Store with the given name, options and default data.
@@ -29,25 +27,27 @@ declare module 'data-store' {
     constructor (name?: string, options?: Options, defaults?: any)
     constructor (options?: Options, defaults?: any)
 
+    readonly data: DataObject
+
     /**
      * Assign value to key and save to the file system.
      * Can be a key-value pair, array of objects, or an object.
      */
 
-    set: (key: string, val: any) => Store
+    set: (key: string, val: any) => this
 
     /**
      * Add the given value to the array at key. Creates a new
      * array if one doesn't exist, and only adds unique values to the array.
      */
 
-    union: (key: string, val: any) => Store
+    union: (key: string, val: any) => this
 
     /**
      * Get the stored value of key.
      */
 
-    get: (key: string, fallback: any) => any
+    get: (key: string, fallback?: any) => any
 
     /**
      * Returns true if the specified key has a value.
@@ -77,13 +77,14 @@ declare module 'data-store' {
      * Reset store.data to an empty object.
      */
 
-    clear: () => undefined
+    clear: () => void
 
     /**
      * Stringify the store. Takes the same arguments as JSON.stringify.
      */
 
-    json: () => string
+    json: (replacer?: ((this: any, key: string, value: any) => any) | (number | string)[] | null,
+           space?: string | number) => string
 
     /**
      * Calls .writeFile() to persist the store to the file system, after
@@ -91,13 +92,13 @@ declare module 'data-store' {
      * called directly as it's used internally by other methods.
      */
 
-    save: () => undefined
+    save: () => void
 
     /**
      * Delete the store from the file system.
      */
 
-    unlink: () => undefined
+    unlink: () => void
   }
   export = Store
 }
