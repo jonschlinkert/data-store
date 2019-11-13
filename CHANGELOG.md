@@ -32,6 +32,14 @@ Changelog entries are classified using the following labels _(from [keep-a-chang
 
 </details>
 
+## [4.1.0] - 2019-11-12
+
+**Added**
+
+- `merge` function added to allow merging object values with `Object.assign`
+- `options.readParseFile` and `options.writeFile` added to allow overriding the default files parsing and writing methods. See [the ini example](./examples/ini.js) for more information.
+- including `index.d.ts` in published NPM package for TypeScript support.
+
 ## [4.0.0] - 2019-07-03
 
 **Changed**
