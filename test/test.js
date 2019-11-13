@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const del = require('delete');
 const assert = require('assert');
+const merge = require('merge-deep');
 const dataStore = require('..');
 const tests = (...args) => path.resolve(__dirname, ...args);
 const storePath = tests('fixtures/tests.json');
@@ -103,19 +104,19 @@ describe('store', () => {
 
   describe('merge', () => {
     it('should allow adding to an existing map', () => {
-      store.merge('a', { b : 'c' });
-      store.merge('d', { e : 'f' });
+      store.set('a', { b : 'c' }, true);
+      store.set('a', { e : 'f' }, true);
       store.set('g', { h : 'i' });
       assert.equal(store.data.a.b, 'c');
-      assert.equal(store.data.d.e, 'f');
+      assert.equal(store.data.a.e, 'f');
       assert.equal(store.data.g.h, 'i');
     });
 
     it('should allow overriding an existing key in an existing map', () => {
-      store.merge('a', { b : 'c' });
-      store.merge('d', { e : 'f' });
+      store.set('a', { b : 'c' }, true);
+      store.set('d', { e : 'f' }, true);
       store.set('g', { h : 'i' });
-      store.merge('d', { e : 'j' });
+      store.set('d', { e : 'j' }, true);
       assert.equal(store.data.a.b, 'c');
       assert.equal(store.data.d.e, 'j');
       assert.equal(store.data.g.h, 'i');
@@ -123,8 +124,20 @@ describe('store', () => {
 
     it('should just overwrite if merge to non-object', () => {
       store.set('a', 'b');
-      store.merge('a', { c : 'd' });
+      store.set('a', { c : 'd' }, true);
       assert.equal(store.data.a.c, 'd');
+    });
+
+    it('should use a custom merge function', () => {
+      store.set('a', { b: 'c', d: { e: 'f' } });
+      store.set('a', { g: 'h', d: { i: 'j' } }, merge);
+      assert.deepEqual(store.data, {
+        a: {
+          b: 'c',
+          d: { e: 'f', i: 'j' },
+          g: 'h'
+        }
+      });
     });
   });
 

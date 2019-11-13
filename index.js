@@ -53,8 +53,8 @@ class Store {
     this.timeouts = {};
 
     // Allow override of read and write methods
-    if (typeof options.readParseFile === 'function') {
-      this.readParseFile = options.readParseFile;
+    if (typeof options.readFile === 'function') {
+      this.readFile = options.readFile;
     }
     if (typeof options.writeFile === 'function') {
       this.writeFile = options.writeFile;
@@ -77,11 +77,12 @@ class Store {
    * @name .set
    * @param {String} `key`
    * @param {any} `val` The value to save to `key`. Must be a valid JSON type: String, Number, Array or Object.
+   * @param {Boolean|Function} `merge` Option to use `Object.assign` or specified function to merge value onto the property. Passed to [set-value][].
    * @return {Object} `Store` for chaining
    * @api public
    */
 
-  set(key, val) {
+  set(key, val, merge) {
     if (typeof key === 'string' && typeof val === 'undefined') {
       return this.del(key);
     }
@@ -92,44 +93,11 @@ class Store {
       }
     } else {
       assert.equal(typeof key, 'string', 'expected key to be a string');
-      set(this.data, key, val);
+      set(this.data, key, val, { merge });
     }
 
     this.save();
     return this;
-  }
-
-  /**
-   * Assign `value` to `key` while retaining prior members of `value` if
-   * `value` is a map. If `value` is not a map, overwrites like `.set`.
-   *
-   * ```js
-   * store.set('a', { b: c });
-   * //=> {a: { b: c }}
-   *
-   * store.merge('a', { d: e });
-   * //=> {a: { b: c, d: e }}
-   *
-   * store.set('a', 'b');
-   * //=> {a: 'b'}
-   *
-   * store.merge('a', { c : 'd' });
-   * //=> {a: { c : 'd' }}
-   * ```
-   *
-   * @name .merge
-   * @param {String} `key`
-   * @param {any} `val` The value to merge to `key`. Must be a valid JSON type: String, Number, Array or Object.
-   * @return {Object} `Store` for chaining
-   * @api public
-   */
-
-  merge(key, val) {
-    let oldVal = this.get(key);
-    if (oldVal && typeof oldVal === 'object' && !Array.isArray(oldVal)) {
-      val = Object.assign(this.get(key), val);
-    }
-    return this.set(key, val);
   }
 
   /**
@@ -373,18 +341,17 @@ class Store {
   }
 
   /**
-   * Read and parse the data from the file system store. This method should
-   * probably not be called directly. Unless you are familiar with the inner
-   * workings of the code it's recommended that you use .load() instead.
+   * Read file at `this.path` and return the parsed data using the specified
+   * `readFile` option. Defaults to reading and parsing JSON data.
    *
    * ```js
-   * data = store.readPraseFile();
+   * data = store.readFile();
    * ```
-   * @name .readParseFile
+   * @name .readFile
    * @return {Object}
    */
 
-  readParseFile() {
+  readFile() {
     return JSON.parse(fs.readFileSync(this.path));
   }
 
@@ -395,7 +362,7 @@ class Store {
 
   load() {
     try {
-      return (this[kData] = this.readParseFile());
+      return (this[kData] = this.readFile());
     } catch (err) {
       if (err.code === 'EACCES') {
         err.message += '\ndata-store does not have permission to load this file\n';

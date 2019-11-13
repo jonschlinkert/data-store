@@ -12,14 +12,14 @@ function writeFile() {
 }
 
 // Will be called in context of store
-function readParseFile() {
+function readFile() {
   let data;
-  
-  console.log('readParseFile');
+
+  console.log('readFile');
   try {
     data = fs.readFileSync(this.path, 'utf-8');
   } catch (e) {
-    console.log('readParseFile error; starting with empty data');
+    console.log('readFile error; starting with empty data');
     data = {};
   }
 
@@ -30,8 +30,8 @@ function readParseFile() {
 const store = new Store('app', {
   path: __dirname + '/data.ini',
   debounce: 10,
-  writeFile: writeFile,
-  readParseFile: readParseFile
+  writeFile,
+  readFile
 });
 
 store.merge('section 1', { a : 'b' });
