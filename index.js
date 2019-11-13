@@ -177,7 +177,9 @@ class Store {
    */
 
   get(key, fallback) {
-	if (typeof key === 'undefined') return this.data;
+	  if (typeof key === 'undefined') {
+      return this.data;
+    }
     assert.equal(typeof key, 'string', 'expected key to be a string');
     const value = get(this.data, key);
     if (typeof value === 'undefined') {
@@ -253,7 +255,9 @@ class Store {
 
   del(key) {
     if (Array.isArray(key)) {
-      for (const k of key) this.del(k);
+      for (const k of key) {
+        this.del(k);
+      }
       return this;
     }
 
@@ -343,8 +347,12 @@ class Store {
    */
 
   save() {
-    if (!this.debounce) return this.writeFile();
-    if (this.timeouts.save) clearTimeout(this.timeouts.save);
+    if (!this.debounce) {
+      return this.writeFile();
+    }
+    if (this.timeouts.save) {
+      clearTimeout(this.timeouts.save);
+    }
     this.timeouts.save = setTimeout(this.writeFile.bind(this), this.debounce);
   }
 
