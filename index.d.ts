@@ -65,7 +65,7 @@ declare module 'data-store' {
      * Delete one or more properties from the store.
      */
 
-    del: (...keys: string[]) => void
+    del: (keys: string | string[]) => void
 
     /**
      * Return a clone of the store.data object.
