@@ -212,22 +212,6 @@ describe('store', () => {
       assert(store.hasOwn('foo\\.bar.baz\\.qux'));
     });
 
-    it('should not mistake double backslashes for escaped keys', () => {
-      store.set('foo\\\\.baz', 'bar');
-      store.set('baz', null);
-      store.set('qux', 5);
-
-      assert(!store.hasOwn('foo'));
-      assert(!store.hasOwn('bar'));
-      assert(!store.hasOwn('foo.baz'));
-      assert(!store.hasOwn('foo\\'));
-      assert(store.hasOwn('baz'));
-      assert(store.hasOwn('qux'));
-
-      store.set('foo\\.bar.baz\\.qux', 'fez');
-      assert(store.hasOwn('foo\\.bar.baz\\.qux'));
-    });
-
     it('should return true if a nested key exists', () => {
       store.set('a.b.c.d', { x: 'zzz' });
       store.set('a.b.c.e', { f: null });
