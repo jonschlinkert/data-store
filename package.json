@@ -1,7 +1,7 @@
 {
   "name": "@juln/data-store",
   "description": "Easily persist and load config data. No dependencies.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "typings": "index.d.ts",
   "homepage": "https://github.com/z-juln/data-store",
   "author": "juln (https://github.com/z-juln)",
