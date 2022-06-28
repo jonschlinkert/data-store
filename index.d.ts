@@ -1,5 +1,5 @@
 
-declare module 'data-store' {
+declare module '@juln/data-store' {
   interface Options {
     /**Disabled by default. Milliseconds to delay writing the JSON file to the file system. This can make the store more performant by preventing multiple subsequent writes after calling .set or setting/getting store.data, but comes with the potential side effect that (when accessing the object directly) the persisted file might be outdated during the timeout. To get around this, use data-store's API to (re-)load the file instead of directly reading the file (using fs.readFile for example). */
     debounce?: number
@@ -23,7 +23,7 @@ declare module 'data-store' {
    * Initialize a new Store with the given name, options and default data.
    */
 
-  class Store {
+  export class Store {
     constructor (name?: string, options?: Options, defaults?: any)
     constructor (options?: Options, defaults?: any)
 
@@ -100,5 +100,9 @@ declare module 'data-store' {
 
     unlink: () => void
   }
-  export = Store
+
+  function createDataStore(name?: string, options?: Options, defaults?: any): Store;
+  function createDataStore(options?: Options, defaults?: any): Store;
+
+  export default createDataStore;
 }
