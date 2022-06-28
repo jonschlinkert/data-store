@@ -1,19 +1,20 @@
 {
-  "name": "data-store",
+  "name": "@juln/data-store",
   "description": "Easily persist and load config data. No dependencies.",
-  "version": "4.1.0",
+  "version": "1.0.0",
   "typings": "index.d.ts",
-  "homepage": "https://github.com/jonschlinkert/data-store",
-  "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
+  "homepage": "https://github.com/z-juln/data-store",
+  "author": "juln (https://github.com/z-juln)",
   "contributors": [
     "Brian Woodward (https://twitter.com/doowb)",
     "Jamen Marz (jamenmarz.com)",
     "Jon Schlinkert (http://twitter.com/jonschlinkert)",
-    "Olsten Larck (https://i.am.charlike.online)"
+    "Olsten Larck (https://i.am.charlike.online)",
+    "juln (https://github.com/z-juln)"
   ],
-  "repository": "jonschlinkert/data-store",
+  "repository": "z-juln/data-store",
   "bugs": {
-    "url": "https://github.com/jonschlinkert/data-store/issues"
+    "url": "https://github.com/z-juln/data-store/issues"
   },
   "license": "MIT",
   "files": [
