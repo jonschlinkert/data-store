@@ -23,7 +23,7 @@ declare module '@juln/data-store' {
    * Initialize a new Store with the given name, options and default data.
    */
 
-  class Store {
+  export class Store {
     constructor (name?: string, options?: Options, defaults?: any)
     constructor (options?: Options, defaults?: any)
 
@@ -100,5 +100,9 @@ declare module '@juln/data-store' {
 
     unlink: () => void
   }
-  export = Store
+
+  function createDataStore(name?: string, options?: Options, defaults?: any): Store;
+  function createDataStore(options?: Options, defaults?: any): Store;
+
+  export default createDataStore;
 }
